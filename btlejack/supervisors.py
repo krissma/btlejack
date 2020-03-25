@@ -85,8 +85,13 @@ class AdvertisementsJammer(Supervisor):
             self.interface = MultiSnifferInterface(len(devices), baudrate, devices)
         else:
             self.interface = MultiSnifferInterface(3)
+        self.enable_adv_jamming()
 
+    def enable_adv_jamming()
         self.interface.enable_advertisements_reactive_jamming(self.channel,self.pattern,self.position)
+
+    def disable_adv_jamming()
+        self.interface.disable_advertisements_reactive_jamming()
 
     def on_adv_jammed(self):
         """
@@ -130,10 +135,21 @@ class AdvertisementsSniffer(Supervisor):
         self.interface.reset_filtering_policy(self.policy["policy_type"])
         for rule in self.policy["rules"]:
             self.interface.add_rule(rule["pattern"],rule["mask"],rule["position"])
+        
+        self.enable_adv_sniffing()
 
+    def enable_adv_sniffing(self):
 	# Enable advertisement sniffing.
         if self.interface.enable_advertisements_sniffing(self.channel):
                 self.state = self.STATE_SNIFFING
+        else:
+            print("Error occured when attempted to put radio into sniffing mode")
+
+    def disable_adv_sniffing(self):
+        if self.interface.disable_advertisements_sniffing():
+                self.state = self.STATE_IDLE
+        else:
+            print("Error occured when attempted to disable radios sniffing mode")
 
     def on_advertisements_response(self, packet):
         pass

@@ -122,9 +122,20 @@ class SingleSnifferInterface(AbstractInterface):
 
         Sends a command switching link into Advertisements reactive Jamming mode.
         """
-        self.link.write(EnableReactiveJammingCommand(channel=channel,pattern=pattern,position=position))
+        self.link.write(DisableReactiveJammingCommand())
         self.link.wait_packet(AdvertisementsResponse)
         super().jam_advertisements()
+        return True
+
+    def disable_advertisements_reactive_jamming():
+        """
+        Disable Advertisements jamming (synchronous).
+
+        Sends a command switching link out of reactive Jamming mode.
+        """
+        self.link.write(EnableReactiveJammingCommand(channel=channel,pattern=pattern,position=position))
+        self.link.wait_packet(AdvertisementsResponse)
+        super().disable_jam_advertisements()
         return True
 
     def disable_advertisements_reactive_jamming(self):
@@ -170,6 +181,9 @@ class SingleSnifferInterface(AbstractInterface):
         Sends a command disabling Advertisements sniffing mode.
         """
         self.link.write(DisableAdvertisementsSniffingCommand())
+        pkt = self.link.wait_packet(AdvertisementsResponse)
+        super().reset()
+        return (pkt.response_type == 0x04 and pkt.status == 1)
 
 class MultiSnifferInterface(AbstractInterface):
     """

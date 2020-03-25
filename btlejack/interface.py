@@ -91,6 +91,12 @@ class AbstractInterface(object):
         """
         self.mode = self.MODE_ADVERTISEMENTS_SNIFFING
 
+    def disable_jam_advertisements(self):
+        """
+        Switch the link in advertisements jamming mode.
+        """
+        self.mode = self.MODE_IDLE
+
     def jam_advertisements(self):
         """
         Switch the link in advertisements jamming mode.

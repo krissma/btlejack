@@ -87,10 +87,10 @@ class AdvertisementsJammer(Supervisor):
             self.interface = MultiSnifferInterface(3)
         self.enable_adv_jamming()
 
-    def enable_adv_jamming()
+    def enable_adv_jamming(self):
         self.interface.enable_advertisements_reactive_jamming(self.channel,self.pattern,self.position)
 
-    def disable_adv_jamming()
+    def disable_adv_jamming(self):
         self.interface.disable_advertisements_reactive_jamming()
 
     def on_adv_jammed(self):

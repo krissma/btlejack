@@ -91,7 +91,8 @@ class AdvertisementsJammer(Supervisor):
         self.interface.enable_advertisements_reactive_jamming(self.channel,self.pattern,self.position)
 
     def disable_adv_jamming(self):
-        self.interface.disable_advertisements_reactive_jamming()
+        if(self.interface.disable_advertisements_reactive_jamming()):
+            print("[!] Jamming could not be disabled")
 
     def on_adv_jammed(self):
         """
@@ -103,8 +104,11 @@ class AdvertisementsJammer(Supervisor):
         """
         Dispatch received packets.
         """
-        if isinstance(packet,VerbosePacket) and packet.data == b"ADV_JAMMED":
-            self.on_adv_jammed()
+        if isinstance(packet,VerbosePacket):
+            if(packet.data == b"ADV_JAMMED"):
+                self.on_adv_jammed()
+            else:
+                self.on_verbose(packet)
         elif isinstance(packet, VerbosePacket) or isinstance(packet, DebugPacket):
             super().on_packet_received(packet)
 

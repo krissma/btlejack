@@ -347,6 +347,13 @@ class CLIAdvertisementsJammer(AdvertisementsJammer):
     def on_adv_jammed(self):
         print("Advertisement jammed !")
 
+    def on_verbose(self, packet):
+        """
+        Called when a verbose packet is received from the sniffer.
+        """
+        if self.verbose:
+            print('> '+ str(packet.data))
+
 class CLIAdvertisementsSniffer(AdvertisementsSniffer):
 
     def __init__(self, devices=None, output=None, verbose=None,channel=37,policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=False,display_raw=False):

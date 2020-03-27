@@ -345,7 +345,8 @@ class CLIAdvertisementsJammer(AdvertisementsJammer):
         print('[i] Starting advertisements reactive jamming on channel '+str(self.channel)+' ...')
 
     def on_adv_jammed(self):
-        print("Advertisement jammed !")
+        if self.verbose:
+            print("Advertisement jammed !")
 
     def on_verbose(self, packet):
         """

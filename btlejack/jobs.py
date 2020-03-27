@@ -122,10 +122,10 @@ class SingleSnifferInterface(AbstractInterface):
 
         Sends a command switching link into Advertisements reactive Jamming mode.
         """
-        self.link.write(EnableReactiveJammingCommand(channel=channel,pattern=pattern,position=position))
-        self.link.wait_packet(AdvertisementsResponse)
         super().jam_advertisements()
-        return True
+        self.link.write(EnableReactiveJammingCommand(channel=channel,pattern=pattern,position=position))
+        pkt = self.link.wait_packet(AdvertisementsResponse)
+        return (pkt.response_type == 0x05 and pkt.status == 0)
 
     def disable_advertisements_reactive_jamming(self):
         """
@@ -249,6 +249,15 @@ class MultiSnifferInterface(AbstractInterface):
         if index < len(self.interfaces):
             return self.interfaces[index]
 
+    def is_idle(self):
+        """
+        Return an existing Link object.
+        """
+        for link in self.interfaces:
+            if(not link.is_idling()):
+                return False
+        return True
+
     def get_nb_interfaces(self):
         return len(self.interfaces)
 
@@ -269,7 +278,6 @@ class MultiSnifferInterface(AbstractInterface):
             link.reset()
 
     def enable_jamming(self, enabled=False):
-        
         if self.active_link is not None:
             self.active_link.enable_jamming(enabled)
 
@@ -395,6 +403,7 @@ class MultiSnifferInterface(AbstractInterface):
         """
         for i,link in enumerate(self.interfaces):
             link.disable_advertisements_reactive_jamming()
+        # super().disable_jam_advertisements()
 
     def reset_filtering_policy(self,policy_type="blacklist"):
         """

@@ -85,10 +85,10 @@ class AdvertisementsJammer(Supervisor):
             self.interface = MultiSnifferInterface(len(devices), baudrate, devices)
         else:
             self.interface = MultiSnifferInterface(3)
-        self.enable_adv_jamming()
+        self.enable_adv_jamming(self.channel, self.pattern, self.position)
 
-    def enable_adv_jamming(self):
-        self.interface.enable_advertisements_reactive_jamming(self.channel,self.pattern,self.position)
+    def enable_adv_jamming(self, channel, pattern, position):
+        self.interface.enable_advertisements_reactive_jamming(channel,pattern,position)
 
     def disable_adv_jamming(self):
         if(self.interface.disable_advertisements_reactive_jamming()):

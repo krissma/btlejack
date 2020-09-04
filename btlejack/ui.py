@@ -349,7 +349,7 @@ class CLIAdvertisementsJammer(AdvertisementsJammer):
 
 class CLIAdvertisementsSniffer(AdvertisementsSniffer):
 
-    def __init__(self, devices=None, output=None, verbose=None,channel=37,policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=False,display_raw=False):
+    def __init__(self, devices=None, output=None, verbose=None,channel=37,policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=False,display_raw=False, no_stdout=False):
         super().__init__(devices=devices,channel=channel,policy=policy,accept_invalid_crc=accept_invalid_crc)
         self.output = output
         self.verbose = verbose
@@ -389,6 +389,9 @@ class CLIAdvertisementsSniffer(AdvertisementsSniffer):
                 self.output.write_packet(ts_sec, ts_usec, 0x8E89BED6, fake_hdr+packet.data[4:])
             else:
                 self.output.write_packet(ts_sec, ts_usec, 0x8E89BED6, fake_hdr+packet.data[4:])
+
+        if self.no_stdout:
+            return
  
         # Generate a display using the dissector or as a raw sequence of bytes
         pkt_hex = ' '.join(['%02x' % c for c in packet.data[4:]])   

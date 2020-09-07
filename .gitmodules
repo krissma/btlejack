@@ -1,3 +1,4 @@
 [submodule "btlejack-firmware"]
 	path = btlejack-firmware
 	url = git@github.com:maxdos64/btlejack-firmware.git
+	branch = pattern_fix

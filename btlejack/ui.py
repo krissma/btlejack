@@ -362,6 +362,7 @@ class CLIAdvertisementsSniffer(AdvertisementsSniffer):
         self.output = output
         self.verbose = verbose
         self.display_raw = display_raw
+        self.no_stdout = no_stdout
         # Display sniffer version
         major,minor = [int(v) for v in VERSION.split('.')]
         versions = self.interface.get_version()

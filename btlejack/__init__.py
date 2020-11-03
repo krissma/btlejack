@@ -20,12 +20,13 @@ from argparse import ArgumentParser
 
 from btlejack.pcap import PcapBleWriter, PcapNordicTapWriter,  PcapBlePHDRWriter
 from btlejack.ui import (CLIAccessAddressSniffer, CLIConnectionRecovery, CLIConnectionSniffer,
-                         CLIAdvertisementsSniffer,CLIAdvertisementsJammer,
-                         ForcedTermination, SnifferUpgradeRequired)
+                         CLIAdvertisementsSniffer, CLIAdvertisementsJammer,
+                         ForcedTermination, SnifferUpgradeRequired, CLISendTestPacket)
 from btlejack.helpers import *
 from btlejack.link import DeviceError
 from btlejack.version import VERSION
 from btlejack.session import BtlejackSession, BtlejackSessionError
+
 
 def bd_address_to_int(bd_address):
     """
@@ -35,7 +36,7 @@ def bd_address_to_int(bd_address):
     if len(addr_bytes) != 6:
         return None
     else:
-        addr_value =  addr_bytes[0] << (8 * 5)
+        addr_value = addr_bytes[0] << (8 * 5)
         addr_value |= addr_bytes[1] << (8 * 4)
         addr_value |= addr_bytes[2] << (8 * 3)
         addr_value |= addr_bytes[3] << (8 * 2)
@@ -107,7 +108,6 @@ def main():
         help='Indicates if the invalid packets are accepted or dropped'
     )
 
-
     parser.add_argument(
         '--raw',
         dest='raw',
@@ -140,7 +140,6 @@ def main():
         default=None,
         help='Set channel map'
     )
-
 
     parser.add_argument(
         '-p',
@@ -239,7 +238,6 @@ def main():
         _dir, _filename = os.path.split(__file__)
         fw_path = os.path.join(_dir, "data", "btlejack-fw.hex")
 
-
         if os.name == 'posix':
             mount_output = check_output('mount').splitlines()
             mounted_volumes = [x.split()[2] for x in mount_output]
@@ -247,8 +245,8 @@ def main():
             for volume in mounted_volumes:
                 if re.match(b'.*MICROBIT[0-9]*$', volume):
                     print('[i] Flashing %s ...' % volume.decode('ascii'))
-                    path = os.path.join(volume.decode('ascii'),'fw.hex')
-                    fw = open(fw_path,'r').read()
+                    path = os.path.join(volume.decode('ascii'), 'fw.hex')
+                    fw = open(fw_path, 'r').read()
                     # copy our firmware on it
                     with open(path, 'wb') as output:
                         output.write(fw.encode('ascii'))
@@ -256,7 +254,8 @@ def main():
             if flashed > 0:
                 print('[i] Flashed %d devices' % flashed)
             else:
-                print('[i] No sniffer found, make sure all your devices are mounted as mass storage devices before flashing.')
+                print(
+                    '[i] No sniffer found, make sure all your devices are mounted as mass storage devices before flashing.')
             sys.exit(1)
         else:
             print('[!] This feature does not support your operating system, sorry.')
@@ -287,7 +286,8 @@ def main():
 
     if args.scan_aa:
         try:
-            supervisor = CLIAccessAddressSniffer(verbose=args.verbose, devices=args.devices)
+            supervisor = CLIAccessAddressSniffer(
+                verbose=args.verbose, devices=args.devices)
         except DeviceError as error:
             print('[!] Please connect a compatible Micro:Bit in order to use BtleJack')
             sys.exit(-1)
@@ -317,7 +317,8 @@ def main():
                 creation_date = datetime.datetime.fromtimestamp(
                     cached_parameters['start']
                 ).strftime('%Y-%m-%d %H:%M:%S')
-                print('[i] Using cached parameters (created on %s)' % creation_date)
+                print('[i] Using cached parameters (created on %s)' %
+                      creation_date)
 
             try:
                 supervisor = CLIConnectionRecovery(
@@ -333,7 +334,8 @@ def main():
                     timeout=args.timeout
                 )
             except SnifferUpgradeRequired as su:
-                print("[i] Quitting, please upgrade your sniffer firmware (-i option if you are using a Micro:Bit)")
+                print(
+                    "[i] Quitting, please upgrade your sniffer firmware (-i option if you are using a Micro:Bit)")
 
         except DeviceError as error:
             print('[!] Please connect a compatible Micro:Bit in order to use BtleJack')
@@ -354,7 +356,8 @@ def main():
                     devices=args.devices
                 )
             except SnifferUpgradeRequired as su:
-                print("[i] Quitting, please upgrade your sniffer firmware (-i option if you are using a Micro:Bit)")
+                print(
+                    "[i] Quitting, please upgrade your sniffer firmware (-i option if you are using a Micro:Bit)")
         else:
             print('[!] Wrong Bluetooth Address format: %s' % args.connreq)
 
@@ -362,7 +365,7 @@ def main():
         """
         Btlejack allows to use a filtering policy in order to accept or drop specific advertisements.
         It may be useful in order to focus on a specific device, if you want to focus on a specific behaviour, etc.
-	The policy can provide a whitelist mode (the rules define the allowed frames) or a blacklist mode
+        The policy can provide a whitelist mode (the rules define the allowed frames) or a blacklist mode
         (the rules define the dropped frames). By default, the whitelist mode is in use, but you can easily change it with
         the --policy_type parameter :
         $ btlejack --policy_type=blacklist --sniff_adv=<rules>
@@ -393,21 +396,21 @@ def main():
 
         The channel can be provided using --channel=37. If multiple sniffers are found, they are set to different channels to
         monitor every advertisements channels.
- 
+
         """
 
-        result = {"policy_type":"whitelist","rules":[]}
+        result = {"policy_type": "whitelist", "rules": []}
 
         pattern_list = args.sniff_advertisements.split(",")
 
         adv_types = {
-	        "ADV_IND":{"position":0,"pattern":b"\x00","mask":b"\x0F"},
-	        "ADV_DIRECT_IND":{"position":0,"pattern":b"\x01","mask":b"\x0F"},
-	        "ADV_NONCONN_IND":{"position":0,"pattern":b"\x02","mask":b"\x0F"},
-	        "SCAN_REQ":{"position":0,"pattern":b"\x03","mask":b"\x0F"},
-	        "SCAN_RSP":{"position":0,"pattern":b"\x04","mask":b"\x0F"},
-	        "CONNECT_REQ":{"position":0,"pattern":b"\x05","mask":b"\x0F"},
-	        "ADV_SCAN_IND":{"position":0,"pattern":b"\x06","mask":b"\x0F"}
+            "ADV_IND": {"position": 0, "pattern": b"\x00", "mask": b"\x0F"},
+            "ADV_DIRECT_IND": {"position": 0, "pattern": b"\x01", "mask": b"\x0F"},
+            "ADV_NONCONN_IND": {"position": 0, "pattern": b"\x02", "mask": b"\x0F"},
+            "SCAN_REQ": {"position": 0, "pattern": b"\x03", "mask": b"\x0F"},
+            "SCAN_RSP": {"position": 0, "pattern": b"\x04", "mask": b"\x0F"},
+            "CONNECT_REQ": {"position": 0, "pattern": b"\x05", "mask": b"\x0F"},
+            "ADV_SCAN_IND": {"position": 0, "pattern": b"\x06", "mask": b"\x0F"}
         }
 
         # For every pattern in the rule's list :
@@ -417,21 +420,22 @@ def main():
                 result["policy_type"] = "blacklist"
                 result["rules"] = []
                 break
-            elif re.match("^([a-fA-F0-9][a-fA-F0-9]:){5}[a-fA-F0-9][a-fA-F0-9]$",pattern):
+            elif re.match("^([a-fA-F0-9][a-fA-F0-9]:){5}[a-fA-F0-9][a-fA-F0-9]$", pattern):
                 # If pattern is a BD address, add a rule matching the pattern anywhere in the frame.
-                result["rules"].append({"pattern":bytes.fromhex(''.join([i for i in pattern.split(":")][::-1])),"mask":b"\xFF"*6,"position":0xFF})
-            elif re.match("^[a-fA-F0-9\?]*:[0-9]+$",pattern) or re.match("^(\*)?[a-fA-F0-9\?]*(\*)?$",pattern) :
+                result["rules"].append({"pattern": bytes.fromhex(''.join(
+                    [i for i in pattern.split(":")][::-1])), "mask": b"\xFF"*6, "position": 0xFF})
+            elif re.match("^[a-fA-F0-9\?]*:[0-9]+$", pattern) or re.match("^(\*)?[a-fA-F0-9\?]*(\*)?$", pattern):
                 # If a regexp-like pattern is provided, generate the corresponding rule.
                 if ":" in pattern:
                     position = int(pattern.split(":")[1])
                     pattern = pattern.split(":")[0]
                 else:
-                    if "*"==pattern[0]:
+                    if "*" == pattern[0]:
                         position = 0xFF
                     else:
                         position = 0
                 value = ""
-                mask = ""   
+                mask = ""
                 for char in pattern:
                     if char == "?":
                         value += "0"
@@ -439,24 +443,27 @@ def main():
                     elif char != "*":
                         value += char
                         mask += "f"
-        
+
                 if len(value) % 2 == 0 and len(mask) == len(value):
                     value = bytes.fromhex(value)
                     mask = bytes.fromhex(mask)
-                    result["rules"].append({"pattern":value,"mask":mask,"position":position})
+                    result["rules"].append(
+                        {"pattern": value, "mask": mask, "position": position})
             elif pattern in adv_types.keys():
-                    # If pattern is a type, use the corresponding rule in adv_types.
-                    result["rules"].append(adv_types[pattern])
+                # If pattern is a type, use the corresponding rule in adv_types.
+                result["rules"].append(adv_types[pattern])
 
             # Set the policy according to the --policy_type parameter
-            result["policy"] = "whitelist" if args.policy_type is None else (args.policy_type if args.policy_type in ("blacklist","whitelist") else "whitelist")
+            result["policy"] = "whitelist" if args.policy_type is None else (
+                args.policy_type if args.policy_type in ("blacklist", "whitelist") else "whitelist")
 
         try:
             # Instanciate the supervisor
-            supervisor = CLIAdvertisementsSniffer(verbose=args.verbose, devices=args.devices,output=output,channel=args.channel,policy=result,accept_invalid_crc=args.accept_invalid_crc, display_raw = args.raw)
+            supervisor = CLIAdvertisementsSniffer(verbose=args.verbose, devices=args.devices, output=output,
+                                                  channel=args.channel, policy=result, accept_invalid_crc=args.accept_invalid_crc, display_raw=args.raw)
         except DeviceError as error:
             print('[!] Please connect a compatible Micro:Bit in order to use BtleJack')
-            sys.exit(-1)  
+            sys.exit(-1)
 
     elif args.jam_advertisements is not None:
         """
@@ -472,11 +479,11 @@ def main():
         device using the physical button (TODO : bugfix). 
         """
         pattern = args.jam_advertisements
-        if re.match("^([a-fA-F0-9][a-fA-F0-9]:){5}[a-fA-F0-9][a-fA-F0-9]$",pattern):
+        if re.match("^([a-fA-F0-9][a-fA-F0-9]:){5}[a-fA-F0-9][a-fA-F0-9]$", pattern):
             # If the argument provided is an address, generate the corresponding pattern at position 2.
             position = 2
-            pattern = bytes.fromhex(pattern.replace(":",""))[::-1]
-        elif re.match("^[a-fA-F0-9]*:[0-9]+$",pattern):
+            pattern = bytes.fromhex(pattern.replace(":", ""))[::-1]
+        elif re.match("^[a-fA-F0-9]*:[0-9]+$", pattern):
             # If the argument provided is a pattern, use it directly.
             position = int(pattern.split(":")[1])
             pattern = bytes.fromhex(pattern.split(":")[0])
@@ -486,17 +493,17 @@ def main():
 
         try:
             # Instanciate the supervisor
-            supervisor = CLIAdvertisementsJammer(verbose=args.verbose, devices=args.devices,output=output,channel=args.channel,pattern=pattern,position=position)
+            supervisor = CLIAdvertisementsJammer(
+                verbose=args.verbose, devices=args.devices, output=output, channel=args.channel, pattern=pattern, position=position)
         except DeviceError as error:
             print('[!] Please connect a compatible Micro:Bit in order to use BtleJack')
-            sys.exit(-1)  
+            sys.exit(-1)
 
     elif not args.flush and not args.install:
         print('BtleJack version %s' % VERSION)
         print('')
         parser.print_help()
         sys.exit(-2)
-
 
     try:
         # install a handler in case CTRL-C is pressed

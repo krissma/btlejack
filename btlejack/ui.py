@@ -5,7 +5,7 @@ from time import time
 from threading import Thread, Lock
 from halo import Halo
 
-from .supervisors import ConnectionRecovery, AccessAddressSniffer, ConnectionSniffer,AdvertisementsSniffer,AdvertisementsJammer
+from .supervisors import ConnectionRecovery, AccessAddressSniffer, ConnectionSniffer, AdvertisementsSniffer, AdvertisementsJammer, SendTestPacket
 from .pcap import PcapBleWriter, PcapNordicTapWriter, PcapBlePHDRWriter
 from .helpers import bytes_to_bd_addr
 
@@ -15,13 +15,16 @@ from .dissect.l2cap import *
 
 from .version import VERSION
 
+
 class ForcedTermination(Exception):
     def __init__(self):
         super().__init__()
 
+
 class SnifferUpgradeRequired(Exception):
     def __init__(self):
         super().__init__()
+
 
 class PromptThread(Thread):
     """
@@ -42,7 +45,6 @@ class PromptThread(Thread):
 
         self.lock = Lock()
         self.canceled = False
-
 
     def prompt(self):
         self.lock.acquire()
@@ -96,7 +98,8 @@ class PromptThread(Thread):
                 bytes([0x02, len(payload)]) + payload
             )
         else:
-            sys.stdout.write('\nYou must specify a valid data type (int, str)\n')
+            sys.stdout.write(
+                '\nYou must specify a valid data type (int, str)\n')
 
     def do_write(self, parameters):
         if len(parameters) >= 3:
@@ -109,10 +112,10 @@ class PromptThread(Thread):
                 print(value)
             elif write_type.lower() == 'hex':
                 try:
-                  value = bytes(bytearray.fromhex(parameters[2]))
+                    value = bytes(bytearray.fromhex(parameters[2]))
                 except:
-                  sys.stdout.write('\nInvalid hex data\n')
-                  return
+                    sys.stdout.write('\nInvalid hex data\n')
+                    return
             payload = L2CAP(ATT(WriteRequest(
                 handle,
                 value
@@ -122,7 +125,8 @@ class PromptThread(Thread):
             )
 
         else:
-            sys.stdout.write('\nYou must specify a valid data type (int, str)\n')
+            sys.stdout.write(
+                '\nYou must specify a valid data type (int, str)\n')
 
     def do_read(self, parameters):
         """
@@ -154,7 +158,8 @@ class PromptThread(Thread):
         """
         self.discovering_services = True
         self.services = []
-        payload = L2CAP(ATT(ReadByGroupTypeRequest(1, 0xffff, PrimaryServicesUUID()))).to_bytes()
+        payload = L2CAP(ATT(ReadByGroupTypeRequest(
+            1, 0xffff, PrimaryServicesUUID()))).to_bytes()
         self.supervisor.send_packet(
             bytes([0x02, len(payload)]) + payload
         )
@@ -165,20 +170,21 @@ class PromptThread(Thread):
         """
         for service in response.attr_datas:
             start, end = unpack('<HH', service[:4])
-            print('start: %04x end: %04x' % (start,end))
+            print('start: %04x end: %04x' % (start, end))
             uuid = UUID(service[4:])
             self.services.append(
                 {
                     'start_handle': start,
                     'end_handle': end,
                     'uuid': uuid,
-                    'characteristics':{}
+                    'characteristics': {}
                 }
             )
         if end == 0xffff:
             self._services_discovered()
         else:
-            payload = L2CAP(ATT(ReadByGroupTypeRequest(end+1, 0xffff, PrimaryServicesUUID()))).to_bytes()
+            payload = L2CAP(ATT(ReadByGroupTypeRequest(
+                end+1, 0xffff, PrimaryServicesUUID()))).to_bytes()
             self.supervisor.send_packet(
                 bytes([0x02, len(payload)]) + payload
             )
@@ -196,7 +202,8 @@ class PromptThread(Thread):
         self.end_handle = self.services[self.service]['end_handle']
 
         # send characteristic discovery for first service
-        payload = L2CAP(ATT(ReadByTypeRequest(self.start_handle, self.end_handle, GATTCharacteristicDeclaration()))).to_bytes()
+        payload = L2CAP(ATT(ReadByTypeRequest(
+            self.start_handle, self.end_handle, GATTCharacteristicDeclaration()))).to_bytes()
         self.supervisor.send_packet(
             bytes([0x02, len(payload)]) + payload
         )
@@ -217,11 +224,11 @@ class PromptThread(Thread):
             self.start_handle = handle
 
         # Ask for more
-        payload = L2CAP(ATT(ReadByTypeRequest(self.start_handle+1, self.end_handle, GATTCharacteristicDeclaration()))).to_bytes()
+        payload = L2CAP(ATT(ReadByTypeRequest(
+            self.start_handle+1, self.end_handle, GATTCharacteristicDeclaration()))).to_bytes()
         self.supervisor.send_packet(
             bytes([0x02, len(payload)]) + payload
         )
-
 
     def _services_charac_next(self, response):
         """
@@ -239,17 +246,17 @@ class PromptThread(Thread):
                     c = service['characteristics'][charac]
                     prop = c['properties']
                     prop_s = ''
-                    if prop & (1<<1) == (1<<1):
+                    if prop & (1 << 1) == (1 << 1):
                         prop_s += 'read '
-                    if prop & (1<<2) == (1<<2):
+                    if prop & (1 << 2) == (1 << 2):
                         prop_s += 'write_without_resp '
-                    if prop & (1<<3) == (1<<3):
+                    if prop & (1 << 3) == (1 << 3):
                         prop_s += 'write '
-                    if prop & (1<<4) == (1<<4):
+                    if prop & (1 << 4) == (1 << 4):
                         prop_s += 'notify '
-                    if prop & (1<<5) == (1<<5):
+                    if prop & (1 << 5) == (1 << 5):
                         prop_s += 'indicate '
-                    if prop & (1<<6) == (1<<6):
+                    if prop & (1 << 6) == (1 << 6):
                         prop_s += 'authenticated '
                     print(' Characteristic UUID: %s' % str(c['uuid']))
                     print('   | handle: %04x' % c['handle'])
@@ -259,11 +266,11 @@ class PromptThread(Thread):
         else:
             self.start_handle = self.services[self.service]['start_handle']
             self.end_handle = self.services[self.service]['end_handle']
-            payload = L2CAP(ATT(ReadByTypeRequest(self.start_handle, self.end_handle, GATTCharacteristicDeclaration()))).to_bytes()
+            payload = L2CAP(ATT(ReadByTypeRequest(
+                self.start_handle, self.end_handle, GATTCharacteristicDeclaration()))).to_bytes()
             self.supervisor.send_packet(
                 bytes([0x02, len(payload)]) + payload
             )
-
 
     def on_ll_packet(self, packet):
         """
@@ -286,7 +293,7 @@ class PromptThread(Thread):
             elif isinstance(response, ReadByTypeResponse):
                 self._services_charac_discovered(response)
             else:
-                #self._services_charac_discover_error()
+                # self._services_charac_discover_error()
                 print(response.payload.payload)
         elif self.reading:
             response = L2CAP.from_bytes(packet.data[12:]).payload.payload
@@ -301,7 +308,7 @@ class PromptThread(Thread):
         else:
             pkt = packet.data[10:]
             pkt_hex = ' '.join(['%02x' % c for c in pkt])
-            sys.stdout.write('\r>> %s\nbtlejack> '%pkt_hex)
+            sys.stdout.write('\r>> %s\nbtlejack> ' % pkt_hex)
 
     def dispatch_command(self, command):
         words = command.split(' ')
@@ -327,22 +334,24 @@ class PromptThread(Thread):
 
 class CLIAdvertisementsJammer(AdvertisementsJammer):
 
-    def __init__(self, devices=None, output=None, verbose=None,channel=37,pattern=b"",position=0):
-        super().__init__(devices=devices,channel=channel,pattern=pattern,position=position)
+    def __init__(self, devices=None, output=None, verbose=None, channel=37, pattern=b"", position=0):
+        super().__init__(devices=devices, channel=channel, pattern=pattern, position=position)
         self.output = output
         self.verbose = verbose
 
         # Display sniffer version
-        major,minor = [int(v) for v in VERSION.split('.')]
+        major, minor = [int(v) for v in VERSION.split('.')]
         versions = self.interface.get_version()
         print('[i] Detected sniffers:')
         for i, version in enumerate(versions):
-            print(' > Sniffer #%d: fw version %d.%d' % (i, version[0], version[1]))
+            print(' > Sniffer #%d: fw version %d.%d' %
+                  (i, version[0], version[1]))
             if (major == version[0] and (minor > version[1])) or (major > version[0]):
                 print(' -!!!- You must update the firmware of this sniffer -!!!-')
                 raise SnifferUpgradeRequired()
 
-        print('[i] Starting advertisements reactive jamming on channel '+str(self.channel)+' ...')
+        print('[i] Starting advertisements reactive jamming on channel ' +
+              str(self.channel)+' ...')
 
     def on_adv_jammed(self):
         if self.verbose:
@@ -353,27 +362,31 @@ class CLIAdvertisementsJammer(AdvertisementsJammer):
         Called when a verbose packet is received from the sniffer.
         """
         if self.verbose:
-            print('> '+ str(packet.data))
+            print('> ' + str(packet.data))
+
 
 class CLIAdvertisementsSniffer(AdvertisementsSniffer):
 
-    def __init__(self, devices=None, output=None, verbose=None,channel=37,policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=False,display_raw=False, no_stdout=False):
-        super().__init__(devices=devices,channel=channel,policy=policy,accept_invalid_crc=accept_invalid_crc)
+    def __init__(self, devices=None, output=None, verbose=None, channel=37, policy={"policy_type": "blacklist", "rules": []}, accept_invalid_crc=False, display_raw=False, no_stdout=False):
+        super().__init__(devices=devices, channel=channel,
+                         policy=policy, accept_invalid_crc=accept_invalid_crc)
         self.output = output
         self.verbose = verbose
         self.display_raw = display_raw
         self.no_stdout = no_stdout
         # Display sniffer version
-        major,minor = [int(v) for v in VERSION.split('.')]
+        major, minor = [int(v) for v in VERSION.split('.')]
         versions = self.interface.get_version()
         print('[i] Detected sniffers:')
         for i, version in enumerate(versions):
-            print(' > Sniffer #%d: fw version %d.%d' % (i, version[0], version[1]))
+            print(' > Sniffer #%d: fw version %d.%d' %
+                  (i, version[0], version[1]))
             if (major == version[0] and (minor > version[1])) or (major > version[0]):
                 print(' -!!!- You must update the firmware of this sniffer -!!!-')
                 raise SnifferUpgradeRequired()
 
-        print('[i] Starting advertisements sniffing on channel '+str(self.channel)+' ...')
+        print('[i] Starting advertisements sniffing on channel ' +
+              str(self.channel)+' ...')
 
     def on_adv_packet(self, packet):
         """
@@ -386,43 +399,58 @@ class CLIAdvertisementsSniffer(AdvertisementsSniffer):
         if self.output is not None:
             # Generate a fake header according to the information provided
             fake_hdr = bytes([
-                                  len(packet.payload), # length
-                                  0x01,                # direction
-                                  packet.channel,      # channel
-                                  packet.rssi,         # rssi
-                                  0x00,0x00,           # event counter
-                                  0x00,0x00,0x00,0x00  # delta
-                                 ])
+                len(packet.payload),  # length
+                0x01,                # direction
+                packet.channel,      # channel
+                packet.rssi,         # rssi
+                0x00, 0x00,           # event counter
+                0x00, 0x00, 0x00, 0x00  # delta
+            ])
             # Is it a Nordic Tap output format ?
-            if isinstance(self.output, PcapNordicTapWriter) or isinstance(self.output, PcapBlePHDRWriter):  
-                self.output.write_packet(ts_sec, ts_usec, 0x8E89BED6, fake_hdr+packet.data[4:])
+            if isinstance(self.output, PcapNordicTapWriter) or isinstance(self.output, PcapBlePHDRWriter):
+                self.output.write_packet(
+                    ts_sec, ts_usec, 0x8E89BED6, fake_hdr+packet.data[4:])
             else:
-                self.output.write_packet(ts_sec, ts_usec, 0x8E89BED6, fake_hdr+packet.data[4:])
+                self.output.write_packet(
+                    ts_sec, ts_usec, 0x8E89BED6, fake_hdr+packet.data[4:])
 
         if self.no_stdout:
             return
- 
-        # Generate a display using the dissector or as a raw sequence of bytes
-        pkt_hex = ' '.join(['%02x' % c for c in packet.data[4:]])   
-        if self.display_raw:
-            
-            print('[LL Data|CRC: '+("ok" if packet.crc_ok == 0x01 else "nok")+"|RSSI:-"+str(packet.rssi)+"dBm|CH:"+str(packet.channel)+"] "+ pkt_hex)
-        else:
-            print("[CRC:"+("ok" if packet.crc_ok == 0x01 else "nok")+"|RSSI:-"+str(packet.rssi)+"dBm|CH:"+str(packet.channel)+"] "+str(Advertisement.from_bytes(packet.data[4:])))
 
-        
+        # Generate a display using the dissector or as a raw sequence of bytes
+        pkt_hex = ' '.join(['%02x' % c for c in packet.data[4:]])
+        if self.display_raw:
+
+            print('[LL Data|CRC: '+("ok" if packet.crc_ok == 0x01 else "nok") +
+                  "|RSSI:-"+str(packet.rssi)+"dBm|CH:"+str(packet.channel)+"] " + pkt_hex)
+        else:
+            print("[CRC:"+("ok" if packet.crc_ok == 0x01 else "nok")+"|RSSI:-"+str(packet.rssi) +
+                  "dBm|CH:"+str(packet.channel)+"] "+str(Advertisement.from_bytes(packet.data[4:])))
+
     def on_verbose(self, packet):
         """
         Called when a verbose packet is received from the sniffer.
         """
         if self.verbose:
-            print('> '+ str(packet))
+            print('> ' + str(packet))
 
     def on_debug(self, packet):
         """
         Called when a debug packet is received from the sniffer.
         """
         print('D:'+str(packet))
+
+
+class CLISendTestPacket(SendTestPacket):
+
+    def __init__(self, devices=None, output=None, verbose=None, channel=37):
+        super().__init__(devices=devices, channel=channel)
+        self.output = output
+        self.verbose = verbose
+
+    def send_test_packet(self, parameters):
+        supervisor.self.send_packet(
+            bytes([0x03, 0x02, 0x02, 0x13]))
 
 
 class CLIAccessAddressSniffer(AccessAddressSniffer):
@@ -433,7 +461,7 @@ class CLIAccessAddressSniffer(AccessAddressSniffer):
         self.verbose = verbose
 
         # Display sniffer version
-        major,minor = [int(v) for v in VERSION.split('.')]
+        major, minor = [int(v) for v in VERSION.split('.')]
         version = self.interface.get_version()
         if major != version[0] and minor != version[1]:
             print(' -!!!- You must update the firmware of this sniffer -!!!-')
@@ -452,7 +480,7 @@ class CLIAccessAddressSniffer(AccessAddressSniffer):
         Called when a verbose packet is received from the sniffer.
         """
         if self.verbose:
-            print('> '+ str(packet))
+            print('> ' + str(packet))
 
     def on_debug(self, packet):
         """
@@ -460,20 +488,23 @@ class CLIAccessAddressSniffer(AccessAddressSniffer):
         """
         print('D:'+str(packet))
 
+
 class CLIConnectionSniffer(ConnectionSniffer):
     """
     New connection sniffer.
     """
+
     def __init__(self, bd_address='ff:ff:ff:ff:ff:ff', devices=None, output=None, verbose=False, timeout=0):
         super().__init__(bd_address, devices=devices)
         self.verbose = verbose
         self.output = output
 
-        major,minor = [int(v) for v in VERSION.split('.')]
+        major, minor = [int(v) for v in VERSION.split('.')]
         versions = self.interface.get_version()
         print('[i] Detected sniffers:')
         for i, version in enumerate(versions):
-            print(' > Sniffer #%d: version %d.%d' % (i, version[0], version[1]))
+            print(' > Sniffer #%d: version %d.%d' %
+                  (i, version[0], version[1]))
             if (major == version[0] and (minor > version[1])) or (major > version[0]):
                 print(' -!!!- You must update the firmware of this sniffer -!!!-')
                 raise SnifferUpgradeRequired()
@@ -494,7 +525,7 @@ class CLIConnectionSniffer(ConnectionSniffer):
             channel_map[1],
             channel_map[0]
         ))
-        print(' |-- Timeout: %d ms' % (timeout * 10) )
+        print(' |-- Timeout: %d ms' % (timeout * 10))
         print('')
 
     def on_ll_packet(self, packet):
@@ -508,13 +539,14 @@ class CLIConnectionSniffer(ConnectionSniffer):
 
             # Is it a Nordic Tap output format ?
             if isinstance(self.output, PcapNordicTapWriter) or isinstance(self.output, PcapBlePHDRWriter):
-                self.output.write_packet(ts_sec, ts_usec, self.access_address, packet.data)
+                self.output.write_packet(
+                    ts_sec, ts_usec, self.access_address, packet.data)
             else:
-                self.output.write_packet(ts_sec, ts_usec, self.access_address, packet.data[10:])
+                self.output.write_packet(
+                    ts_sec, ts_usec, self.access_address, packet.data[10:])
 
         pkt_hex = ' '.join(['%02x' % c for c in packet.data[10:]])
         print('LL Data: ' + pkt_hex)
-
 
     def on_hijacking_success(self):
         """
@@ -533,7 +565,7 @@ class CLIConnectionSniffer(ConnectionSniffer):
         Called when a verbose packet is received from the sniffer.
         """
         if self.verbose:
-            print('> '+ str(packet.message))
+            print('> ' + str(packet.message))
 
     def on_connection_lost(self):
         """
@@ -567,11 +599,12 @@ class CLIConnectionRecovery(ConnectionRecovery):
         self._pt = None
 
         # Display sniffers version
-        major,minor = [int(v) for v in VERSION.split('.')]
+        major, minor = [int(v) for v in VERSION.split('.')]
         versions = self.interface.get_version()
         print('[i] Detected sniffers:')
         for i, version in enumerate(versions):
-            print(' > Sniffer #%d: fw version %d.%d' % (i, version[0], version[1]))
+            print(' > Sniffer #%d: fw version %d.%d' %
+                  (i, version[0], version[1]))
             if (major == version[0] and (minor > version[1])) or (major > version[0]):
                 print(' -!!!- You must update the firmware of this sniffer -!!!-')
                 raise SnifferUpgradeRequired()
@@ -596,7 +629,7 @@ class CLIConnectionRecovery(ConnectionRecovery):
         Called when a verbose packet is received from the sniffer.
         """
         if self.verbose:
-            print('@> '+ str(packet.message))
+            print('@> ' + str(packet.message))
 
     def on_debug(self, packet):
         """
@@ -611,7 +644,7 @@ class CLIConnectionRecovery(ConnectionRecovery):
         self.crc = crc
         self.spinner.stop_and_persist(
             symbol='✓'.encode('utf-8'),
-            text='CRCInit = 0x%06x'%crc
+            text='CRCInit = 0x%06x' % crc
         )
         if self.chm_provided:
             print('✓ Channel map is provided: 0x%010x' % self.chm)
@@ -629,7 +662,7 @@ class CLIConnectionRecovery(ConnectionRecovery):
         self.chm = chm
         self.spinner.stop_and_persist(
             symbol='✓'.encode('utf-8'),
-            text='Channel Map = 0x%010x'%chm
+            text='Channel Map = 0x%010x' % chm
         )
         if self.hop_provided:
             print('✓ Hop interval is provided: %d' % self.hop_interval)
@@ -646,7 +679,7 @@ class CLIConnectionRecovery(ConnectionRecovery):
         """
         self.spinner.stop_and_persist(
             symbol='✓'.encode('utf-8'),
-            text='Hop interval = %d'%interval
+            text='Hop interval = %d' % interval
         )
         self.spinner.text = 'Computing hop increment'
         self.spinner.start()
@@ -657,7 +690,7 @@ class CLIConnectionRecovery(ConnectionRecovery):
         """
         self.spinner.stop_and_persist(
             symbol='✓'.encode('utf-8'),
-            text='Hop increment = %d'%increment
+            text='Hop increment = %d' % increment
         )
         if self._hijack:
             print('[i] Synchronized, hijacking in progress ...')
@@ -667,7 +700,6 @@ class CLIConnectionRecovery(ConnectionRecovery):
             self.jam()
         else:
             print('[i] Synchronized, packet capture in progress ...')
-
 
     def on_ll_packet(self, packet):
         """
@@ -680,7 +712,8 @@ class CLIConnectionRecovery(ConnectionRecovery):
             ts_sec = int(timestamp)
             ts_usec = int((timestamp - ts_sec)*1000000)
             if self.output is not None:
-                self.output.write_packet(ts_sec, ts_usec, self.access_address, packet.data)
+                self.output.write_packet(
+                    ts_sec, ts_usec, self.access_address, packet.data)
             pkt_hex = ' '.join(['%02x' % c for c in packet.data[10:]])
             print('LL Data: ' + pkt_hex)
 
@@ -710,7 +743,6 @@ class CLIConnectionRecovery(ConnectionRecovery):
             raise ForcedTermination()
         else:
             super().on_packet_received(packet)
-
 
     def on_connection_lost(self):
         """

@@ -97,6 +97,7 @@ class Packet(object):
     N_HIJACK_STATUS = 0x08
     N_CONN_LOST = 0x09
     N_ADVERTISEMENTS = 0x0A
+    OP_SEND_TEST_PKT = 0x1F
 
     def __init__(self, operation, data, flags):
         """
@@ -692,6 +693,12 @@ class SendPacketCommand(Packet):
     """
     def __init__(self, payload):
         super().__init__(Packet.OP_SEND_PKT, payload, Packet.F_CMD)
+ 
+class SendTestPacketCommand(Packet):
+    
+    def __init__(self):
+        super().__init__(Packet.OP_SEND_TEST_PKT, bytes([]), Packet.F_CMD) 
+
 
 @register_packet(Packet.OP_SEND_PKT, Packet.F_CMD | Packet.F_RESP)
 class SendPacketResponse(Packet):

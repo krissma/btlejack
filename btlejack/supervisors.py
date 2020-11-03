@@ -22,6 +22,7 @@ from btlejack.session import BtlejackSession, BtlejackSessionError
 from btlejack.packets import *
 from btlejack.link import DeviceError
 
+
 class Supervisor(object):
     """
     Default supervisor class.
@@ -68,6 +69,31 @@ class Supervisor(object):
         print('D:'+str(packet))
 
 
+class SendTestPacket(Supervisor):
+    """
+    Test packet supervisor. Allows to send a packet for testing.
+    """
+
+    def __init__(self, devices=None, baudrate=115200, channel=37):
+        super().__init__()
+        self.channel = channel
+
+       # Pick first device as we only want to use one
+        if devices is not None:
+            if len(devices) >= 1:
+                self.interface = SingleSnifferInterface(devices[0], baudrate)
+            else:
+                raise DeviceError('No device provided')
+        else:
+            self.interface = SingleSnifferInterface()
+
+    def send_test_packet(self, packet):
+        """
+        Send a test packet.
+        """
+        self.sent_packet = self.interface.send_packet(packet)
+
+
 class AdvertisementsJammer(Supervisor):
     """
     Advertisements jammer supervisor.
@@ -75,20 +101,23 @@ class AdvertisementsJammer(Supervisor):
     This supervisor allow to configure the sniffer as a reactive jammer for jamming advertisements, according to
      the provided pattern. 
     """
-    def __init__(self, devices=None, baudrate=115200,channel=37,pattern=b"",position=0):
+
+    def __init__(self, devices=None, baudrate=115200, channel=37, pattern=b"", position=0):
         super().__init__()
         self.channel = channel
         self.pattern = pattern
         self.position = position
 
         if devices is not None:
-            self.interface = MultiSnifferInterface(len(devices), baudrate, devices)
+            self.interface = MultiSnifferInterface(
+                len(devices), baudrate, devices)
         else:
             self.interface = MultiSnifferInterface(3)
         self.enable_adv_jamming(self.channel, self.pattern, self.position)
 
     def enable_adv_jamming(self, channel, pattern, position):
-        self.interface.enable_advertisements_reactive_jamming(channel,pattern,position)
+        self.interface.enable_advertisements_reactive_jamming(
+            channel, pattern, position)
 
     def disable_adv_jamming(self):
         if(self.interface.disable_advertisements_reactive_jamming()):
@@ -104,13 +133,14 @@ class AdvertisementsJammer(Supervisor):
         """
         Dispatch received packets.
         """
-        if isinstance(packet,VerbosePacket):
+        if isinstance(packet, VerbosePacket):
             if(packet.data == b"ADV_JAMMED"):
                 self.on_adv_jammed()
             else:
                 self.on_verbose(packet)
         elif isinstance(packet, VerbosePacket) or isinstance(packet, DebugPacket):
             super().on_packet_received(packet)
+
 
 class AdvertisementsSniffer(Supervisor):
     """
@@ -122,7 +152,7 @@ class AdvertisementsSniffer(Supervisor):
     STATE_IDLE = 0
     STATE_SNIFFING = 1
 
-    def __init__(self, devices=None, baudrate=115200,channel=37,policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=False):
+    def __init__(self, devices=None, baudrate=115200, channel=37, policy={"policy_type": "blacklist", "rules": []}, accept_invalid_crc=False):
         super().__init__()
         self.channel = channel
         self.policy = policy
@@ -131,27 +161,29 @@ class AdvertisementsSniffer(Supervisor):
 
         # Configure the devices.
         if devices is not None:
-            self.interface = MultiSnifferInterface(len(devices), baudrate, devices)
+            self.interface = MultiSnifferInterface(
+                len(devices), baudrate, devices)
         else:
             self.interface = MultiSnifferInterface(3)
 
         # Configure the filtering policy.
         self.interface.reset_filtering_policy(self.policy["policy_type"])
         for rule in self.policy["rules"]:
-            self.interface.add_rule(rule["pattern"],rule["mask"],rule["position"])
-        
+            self.interface.add_rule(
+                rule["pattern"], rule["mask"], rule["position"])
+
         self.enable_adv_sniffing()
 
     def enable_adv_sniffing(self):
-	# Enable advertisement sniffing.
+        # Enable advertisement sniffing.
         if self.interface.enable_advertisements_sniffing(self.channel):
-                self.state = self.STATE_SNIFFING
+            self.state = self.STATE_SNIFFING
         else:
             print("Error occured when attempted to put radio into sniffing mode")
 
     def disable_adv_sniffing(self):
         if self.interface.disable_advertisements_sniffing():
-                self.state = self.STATE_IDLE
+            self.state = self.STATE_IDLE
         else:
             print("Error occured when attempted to disable radios sniffing mode")
 
@@ -167,11 +199,12 @@ class AdvertisementsSniffer(Supervisor):
         else:
             if isinstance(packet, AdvertisementsResponse):
                 self.on_advertisements_response(packet)
-            elif isinstance(packet,AdvertisementsPacketNotification):
+            elif isinstance(packet, AdvertisementsPacketNotification):
                 if self.state == self.STATE_SNIFFING:
                     # Checks if the CRC is valid or if the accept_invalid_crc option is set
                     if packet.crc_ok == 0x01 or (packet.crc_ok == 0x00 and self.accept_invalid_crc):
                         self.on_adv_packet(packet)
+
 
 class AccessAddressSniffer(Supervisor):
     """
@@ -265,7 +298,8 @@ class ConnectionRecovery(Supervisor):
             self.session = None
 
         if devices is not None:
-            self.interface = MultiSnifferInterface(len(devices), baudrate, devices)
+            self.interface = MultiSnifferInterface(
+                len(devices), baudrate, devices)
         else:
             self.interface = MultiSnifferInterface(999)
         self.state = self.STATE_RECOVER_CRC
@@ -297,11 +331,11 @@ class ConnectionRecovery(Supervisor):
                 self.interface.recover_hop(access_address, self.crc, self.chm)
             else:
                 self.state = self.STATE_RECOVER_CCHM
-                self.interface.recover_chm(access_address, self.crc, self.timeout)
+                self.interface.recover_chm(
+                    access_address, self.crc, self.timeout)
         else:
             self.state = self.STATE_RECOVER_CRC
             self.interface.recover_crcinit(access_address)
-
 
     def jam(self):
         """
@@ -322,7 +356,7 @@ class ConnectionRecovery(Supervisor):
         """
         Packet handler.
         """
-        #print(packet)
+        # print(packet)
         if isinstance(packet, VerbosePacket) or isinstance(packet, DebugPacket):
             super().on_packet_received(packet)
         elif isinstance(packet, ConnectionLostNotification):
@@ -344,7 +378,7 @@ class ConnectionRecovery(Supervisor):
 
                     # If channel map is provided
                     if self.chm_provided:
-                        #self.on_chm(self.chm)
+                        # self.on_chm(self.chm)
                         self.state = self.STATE_RECOVER_HOPINTER
                     else:
                         # We are going to recover the channel map
@@ -502,7 +536,6 @@ class ConnectionSniffer(Supervisor):
             # something went wrong, wont keep the session
             self.session = None
 
-
     def sniff(self):
         """
         Start sniffing for new connections.
@@ -551,7 +584,8 @@ class ConnectionSniffer(Supervisor):
                     class rawpacket:
                         def __init__(self, payload):
                             self.data = payload
-                    pkt = bytes([0]*10) +bytes([0x05, 0x22]) + packet.inita + packet.adva+packet.payload
+                    pkt = bytes([0]*10) + bytes([0x05, 0x22]) + \
+                        packet.inita + packet.adva+packet.payload
                     self.access_address = 0x8e89bed6
                     self.on_ll_packet(rawpacket(pkt))
 
@@ -564,7 +598,6 @@ class ConnectionSniffer(Supervisor):
                             }
                         )
                         self.session.save()
-
 
                     self.access_address = packet.access_address
                     self.on_connection(

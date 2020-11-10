@@ -7,15 +7,16 @@ required packet classes.
 
 from struct import pack, unpack
 
+
 class register_packet(object):
     """
     Decorator used to register packet classes with the corresponding operations
     and types.
     """
+
     def __init__(self, packet_op, packet_type):
         self.packet_op = packet_op
         self.packet_type = packet_type
-
 
     def __call__(self, clazz):
         """
@@ -28,6 +29,7 @@ class register_packet(object):
             clazz
         )
         return clazz
+
 
 class PacketRegistry(object):
     """
@@ -44,7 +46,7 @@ class PacketRegistry(object):
         """
         Associate a packet class with its characteristics.
         """
-        pkt_characs = packet_op | ((packet_type&0x0f) << 4)
+        pkt_characs = packet_op | ((packet_type & 0x0f) << 4)
         if pkt_characs not in PacketRegistry.registry:
             PacketRegistry.registry[pkt_characs] = packet_class
 
@@ -53,7 +55,7 @@ class PacketRegistry(object):
         """
         Decode packet into corresponding class instance.
         """
-        pkt_characs = packet.operation | ((packet.flags&0x0F) << 4)
+        pkt_characs = packet.operation | ((packet.flags & 0x0F) << 4)
         if pkt_characs in PacketRegistry.registry:
             return PacketRegistry.registry[pkt_characs].from_raw(packet)
         else:
@@ -98,6 +100,7 @@ class Packet(object):
     N_CONN_LOST = 0x09
     N_ADVERTISEMENTS = 0x0A
     OP_SEND_TEST_PKT = 0x1F
+    OP_RECEIVE_TEST_PKT = 0x2F
 
     def __init__(self, operation, data, flags):
         """
@@ -131,7 +134,7 @@ class Packet(object):
         if _crc == data[-1]:
             # parse operation and flags
             op = data[1] & 0x0F
-            flags = (data[1]>>4)&0x0F
+            flags = (data[1] >> 4) & 0x0F
 
             # get packet size
             pkt_size = unpack('<H', data[2:4])[0]
@@ -150,10 +153,10 @@ class Packet(object):
         """
         # generate header
         length_l = len(self.data) & 0xFF
-        length_h = (len(self.data)>>8) & 0xFF
+        length_h = (len(self.data) >> 8) & 0xFF
         buffer = [
             0xBC,
-            (self.operation & 0x0F) | ((self.flags&0x0F) << 4),
+            (self.operation & 0x0F) | ((self.flags & 0x0F) << 4),
             length_l,
             length_h
         ]
@@ -171,7 +174,7 @@ class Packet(object):
         return "<Packet op=%02x flags=%02x data='%s'>" % (
             self.operation,
             self.flags,
-            #self.data
+            # self.data
             hex_payload
         )
 
@@ -210,6 +213,7 @@ class DebugPacket(Packet):
         """
         return DebugPacket(packet.data)
 
+
 @register_packet(Packet.OP_VERBOSE, Packet.F_RESP)
 class VerbosePacket(Packet):
     """
@@ -238,17 +242,19 @@ class ResetCommand(Packet):
     """
     Reset command.
     """
+
     def __init__(self):
         super().__init__(Packet.OP_RESET, bytes([]), Packet.F_CMD)
+
 
 @register_packet(Packet.OP_RESET, Packet.F_RESP | Packet.F_CMD)
 class ResetResponse(Packet):
     """
     Reset response packet.
     """
+
     def __init__(self):
         super().__init__(Packet.OP_RESET, bytes([]), Packet.F_RESP)
-
 
     def __str__(self):
         """
@@ -268,17 +274,21 @@ class VersionCommand(Packet):
     """
     Version command.
     """
+
     def __init__(self):
         super().__init__(Packet.OP_VERSION, bytes([]), Packet.F_CMD)
+
 
 @register_packet(Packet.OP_VERSION, Packet.F_RESP)
 class VersionResponse(Packet):
     """
     Version response.
     """
+
     def __init__(self, major=0, minor=0):
         self.major, self.minor = major, minor
-        super().__init__(Packet.OP_VERSION, bytes([major, minor]), Packet.F_CMD | Packet.F_RESP)
+        super().__init__(Packet.OP_VERSION, bytes(
+            [major, minor]), Packet.F_CMD | Packet.F_RESP)
 
     def __str__(self):
         return '<pkt> Version: %d %d' % (self.major, self.minor)
@@ -286,27 +296,29 @@ class VersionResponse(Packet):
     def __repr__(self):
         return str(self)
 
-
     @staticmethod
     def from_raw(packet):
         """
         Parse major and minor versions.
         """
-        return VersionResponse(packet.data[0],packet.data[1])
+        return VersionResponse(packet.data[0], packet.data[1])
 
 
 class ScanConnectionsCommand(Packet):
     """
     Version command.
     """
+
     def __init__(self):
         super().__init__(Packet.OP_SCAN_AA, bytes([]), Packet.F_CMD)
+
 
 @register_packet(Packet.OP_SCAN_AA, Packet.F_CMD | Packet.F_RESP)
 class ScanConnectionsResponse(Packet):
     """
     Scan connection response.
     """
+
     def __init__(self):
         super().__init__(Packet.OP_SCAN_AA, bytes([]), Packet.F_CMD)
 
@@ -320,21 +332,24 @@ class ScanConnectionsResponse(Packet):
         """
         return ScanConnectionsResponse()
 
+
 class CollabChannelMapCommand(Packet):
     """
     Collaborative channel map command
     """
+
     def __init__(self, access_address, crcinit, start=0, stop=37):
         params = pack('<IBBBBB',
-            access_address,
-            crcinit & 0xff,
-            (crcinit & 0xff00) >> 8,
-            (crcinit & 0xff0000) >> 16,
-            start,
-            stop
-        )
+                      access_address,
+                      crcinit & 0xff,
+                      (crcinit & 0xff00) >> 8,
+                      (crcinit & 0xff0000) >> 16,
+                      start,
+                      stop
+                      )
         print(len(params))
         super().__init__(Packet.OP_CCHM, params, Packet.F_CMD)
+
 
 @register_packet(Packet.OP_CCHM, Packet.F_CMD | Packet.F_RESP)
 class CollabChannelMapResponse(Packet):
@@ -358,6 +373,7 @@ class AccessAddressNotification(Packet):
     Access Address notification sent while discovering existing
     AA.
     """
+
     def __init__(self, channel=0, rssi=0, access_address=None):
         """
         Constructor.
@@ -398,15 +414,18 @@ class EnableAdvertisementsSniffingCommand(Packet):
     """
     Enable Advertisements Sniffing command.
     """
+
     def __init__(self, channel):
         # operation 0x03: enable sniffing
         payload = pack('<BB', 0x03, channel)
         super().__init__(Packet.OP_ADVERTISEMENTS, payload, Packet.F_CMD)
 
+
 class DisableAdvertisementsSniffingCommand(Packet):
     """
     Disable Advertisements Sniffing command.
     """
+
     def __init__(self):
         # operation 0x04: disable sniffing
         payload = pack('B', 0x04)
@@ -417,18 +436,21 @@ class ResetFilteringPolicyCommand(Packet):
     """
     Reset Filtering Policy command.
     """
+
     def __init__(self, policy="blacklist"):
         self.policy_value = 0x00 if policy == "blacklist" else 0x01
         # operation 0x00: reset filtering policy
         payload = pack('<BB', 0x00, self.policy_value)
         super().__init__(Packet.OP_ADVERTISEMENTS, payload, Packet.F_CMD)
 
+
 class AddRuleCommand(Packet):
     """
     Add Rule command.
     """
-    def __init__(self,pattern=b"",mask=b"",position=None):
-        
+
+    def __init__(self, pattern=b"", mask=b"", position=None):
+
         self.length = len(pattern)
         self.pattern = pattern
         self.mask = mask if len(mask) == len(pattern) else b"\xFF"*len(pattern)
@@ -439,44 +461,51 @@ class AddRuleCommand(Packet):
 
         super().__init__(Packet.OP_ADVERTISEMENTS, payload, Packet.F_CMD)
 
+
 class EnableReactiveJammingCommand(Packet):
     """
     Enable Reactive Jamming command.
     """
-    def __init__(self,pattern=b"",position=0,channel=37):
-        
+
+    def __init__(self, pattern=b"", position=0, channel=37):
+
         self.length = len(pattern)
         self.pattern = pattern
         self.position = position
         self.channel = channel
         # operation 0x05: enable reactive jamming
-        payload = pack('<BBBB', 0x05, self.channel,self.position,self.length)
+        payload = pack('<BBBB', 0x05, self.channel, self.position, self.length)
         payload += pattern
-        
+
         super().__init__(Packet.OP_ADVERTISEMENTS, payload, Packet.F_CMD)
+
 
 class DisableReactiveJammingCommand(Packet):
     """
     Disable Reactive Jamming command.
     """
+
     def __init__(self):
-        
+
         # operation 0x06: disable reactive jamming
         payload = pack('B', 0x06)
         super().__init__(Packet.OP_ADVERTISEMENTS, payload, Packet.F_CMD)
+
 
 @register_packet(Packet.OP_ADVERTISEMENTS, Packet.F_CMD | Packet.F_RESP)
 class AdvertisementsResponse(Packet):
     """
     Advertisements response.
     """
-    def __init__(self, operation, response_type=0, status=0,data=bytes()):
+
+    def __init__(self, operation, response_type=0, status=0, data=bytes()):
         self.operation = operation
         self.response_type = response_type
         self.status = status
         self.data = data
         if response_type == 0x03 or response_type == 0x04:
-            super().__init__(Packet.OP_ADVERTISEMENTS, pack('BB', response_type,status), Packet.F_CMD | Packet.F_RESP)
+            super().__init__(Packet.OP_ADVERTISEMENTS, pack(
+                'BB', response_type, status), Packet.F_CMD | Packet.F_RESP)
         else:
             pass
 
@@ -487,12 +516,14 @@ class AdvertisementsResponse(Packet):
     def from_raw(packet):
         response_type = packet.data[0]
         status = packet.data[1]
-        return AdvertisementsResponse(packet.operation,response_type=response_type,status=status,data=packet.data)
+        return AdvertisementsResponse(packet.operation, response_type=response_type, status=status, data=packet.data)
+
 
 class CrcNotification(Packet):
     """
     Crc notification
     """
+
     def __init__(self, access_address, crc):
         """
         Constructor
@@ -512,39 +543,44 @@ class RecoverCrcInitCommand(Packet):
     """
     Recover connection's CRCInit value command.
     """
+
     def __init__(self, access_address):
         # operation 0x00: recover CRCInit
         payload = pack('<BI', 0, access_address)
         super().__init__(Packet.OP_RECOVER, payload, Packet.F_CMD)
 
+
 class RecoverChmCommand(Packet):
     """
     Recover connection's channel map command.
     """
+
     def __init__(self, access_address, crcinit, start, stop, timeout=0):
         params = pack('<BIBBBBBI',
-            1, # operation type is CHM recovery
-            access_address,
-            crcinit & 0xff,
-            (crcinit & 0xff00) >> 8,
-            (crcinit & 0xff0000) >> 16,
-            start,
-            stop,
-            timeout
-        )
+                      1,  # operation type is CHM recovery
+                      access_address,
+                      crcinit & 0xff,
+                      (crcinit & 0xff00) >> 8,
+                      (crcinit & 0xff0000) >> 16,
+                      start,
+                      stop,
+                      timeout
+                      )
         super().__init__(Packet.OP_RECOVER, params, Packet.F_CMD)
+
 
 class RecoverHopCommand(Packet):
     """
     Recover connection's hopping parameters (interval and increment).
     """
+
     def __init__(self, access_address, crcinit, chm):
         chm = bytes([
-            chm&0xff,
-            (chm&0xff00) >> 8,
-            (chm&0xff0000) >> 16,
-            (chm&0xff000000) >> 24,
-            (chm&0xff00000000) >> 32,
+            chm & 0xff,
+            (chm & 0xff00) >> 8,
+            (chm & 0xff0000) >> 16,
+            (chm & 0xff000000) >> 24,
+            (chm & 0xff00000000) >> 32,
         ])
         payload = pack(
             '<BIBBB',
@@ -556,11 +592,13 @@ class RecoverHopCommand(Packet):
         ) + chm
         super().__init__(Packet.OP_RECOVER, payload, Packet.F_CMD)
 
+
 @register_packet(Packet.OP_RECOVER, Packet.F_CMD | Packet.F_RESP)
 class RecoverResponse(Packet):
     """
     Recover connection response.
     """
+
     def __init__(self, operation):
         super().__init__(Packet.OP_RECOVER, bytes(), Packet.F_CMD | Packet.F_RESP)
 
@@ -568,46 +606,53 @@ class RecoverResponse(Packet):
     def from_raw(packet):
         return RecoverResponse(packet.operation)
 
+
 class RecoverConnectionCommand(Packet):
     """
     Recover connection parameters command.
     """
+
     def __init__(self, access_address, chm=None, hop=None):
         if chm is None:
             payload = pack('<I', access_address)
             super().__init__(Packet.OP_RECOVER_AA, payload, Packet.F_CMD)
         elif hop is None:
             chm = bytes([
-                chm&0xff,
-                (chm&0xff00) >> 8,
-                (chm&0xff0000) >> 16,
-                (chm&0xff000000) >> 24,
-                (chm&0xff00000000) >> 32,
+                chm & 0xff,
+                (chm & 0xff00) >> 8,
+                (chm & 0xff0000) >> 16,
+                (chm & 0xff000000) >> 24,
+                (chm & 0xff00000000) >> 32,
             ])
             payload = pack('<I', access_address) + chm
             super().__init__(Packet.OP_RECOVER_AA_CHM, payload, Packet.F_CMD)
         else:
             chm = bytes([
-                chm&0xff,
-                (chm&0xff00) >> 8,
-                (chm&0xff0000) >> 16,
-                (chm&0xff000000) >> 24,
-                (chm&0xff00000000) >> 32,
+                chm & 0xff,
+                (chm & 0xff00) >> 8,
+                (chm & 0xff0000) >> 16,
+                (chm & 0xff000000) >> 24,
+                (chm & 0xff00000000) >> 32,
             ])
             payload = pack('<I', access_address) + chm + pack('<H', hop)
             super().__init__(Packet.OP_RECOVER_AA_CHM_HOPINTER, payload, Packet.F_CMD)
 
-#@register_packet(Packet.OP_RECOVER_AA, Packet.F_CMD | Packet.F_RESP)
-#@register_packet(Packet.OP_RECOVER_AA_CHM, Packet.F_CMD | Packet.F_RESP)
+# @register_packet(Packet.OP_RECOVER_AA, Packet.F_CMD | Packet.F_RESP)
+# @register_packet(Packet.OP_RECOVER_AA_CHM, Packet.F_CMD | Packet.F_RESP)
+
+
 class RecoverConnectionResponse(Packet):
     """
     Recover connection response.
     """
+
     def __init__(self, operation, access_address=0):
         if operation == Packet.OP_RECOVER_AA:
-            super().__init__(Packet.OP_RECOVER_AA, pack('<I', access_address), Packet.F_CMD | Packet.F_RESP)
+            super().__init__(Packet.OP_RECOVER_AA, pack(
+                '<I', access_address), Packet.F_CMD | Packet.F_RESP)
         elif operation == Packet.OP_RECOVER_AA_CHM:
-            super().__init__(Packet.OP_RECOVER_AA_CHM, pack('<I', access_address), Packet.F_CMD | Packet.F_RESP)
+            super().__init__(Packet.OP_RECOVER_AA_CHM, pack(
+                '<I', access_address), Packet.F_CMD | Packet.F_RESP)
         else:
             pass
 
@@ -621,15 +666,19 @@ class SniffConnReqCommand(Packet):
     """
     Sniff connection request packets command
     """
+
     def __init__(self, bd_address, channel=37):
-        payload = pack('<IHB', bd_address&0xffffffff, bd_address>>32, channel)
+        payload = pack('<IHB', bd_address & 0xffffffff,
+                       bd_address >> 32, channel)
         super().__init__(Packet.OP_SNIFF_CONREQ, payload, Packet.F_CMD)
+
 
 @register_packet(Packet.OP_SNIFF_CONREQ, Packet.F_CMD | Packet.F_RESP)
 class SniffConnReqResponse(Packet):
     """
     Sniff connection request response.
     """
+
     def __init__(self):
         super().__init__(Packet.OP_SNIFF_CONREQ, bytes([]), Packet.F_CMD | Packet.F_RESP)
 
@@ -637,11 +686,13 @@ class SniffConnReqResponse(Packet):
     def from_raw(packet):
         return SniffConnReqResponse()
 
+
 @register_packet(Packet.OP_SNIFF_CONREQ, Packet.F_CMD)
 class EnableJammingCommand(Packet):
     """
     Sniff connection request packets command
     """
+
     def __init__(self, enabled=False):
         if enabled:
             payload = bytes([1])
@@ -649,11 +700,13 @@ class EnableJammingCommand(Packet):
             payload = bytes([0])
         super().__init__(Packet.OP_ENABLE_JAMMING, payload, Packet.F_CMD)
 
+
 @register_packet(Packet.OP_ENABLE_JAMMING, Packet.F_CMD | Packet.F_RESP)
 class EnableJammingResponse(Packet):
     """
     Sniff connection request response.
     """
+
     def __init__(self):
         super().__init__(Packet.OP_ENABLE_JAMMING, bytes([]), Packet.F_CMD | Packet.F_RESP)
 
@@ -661,11 +714,13 @@ class EnableJammingResponse(Packet):
     def from_raw(packet):
         return EnableJammingResponse()
 
+
 @register_packet(Packet.OP_SNIFF_CONREQ, Packet.F_CMD)
 class EnableHijackingCommand(Packet):
     """
     Hijacking command.
     """
+
     def __init__(self, enabled=False):
         if enabled:
             payload = bytes([1])
@@ -673,13 +728,16 @@ class EnableHijackingCommand(Packet):
             payload = bytes([0])
         super().__init__(Packet.OP_ENABLE_HIJACKING, payload, Packet.F_CMD)
 
+
 @register_packet(Packet.OP_ENABLE_HIJACKING, Packet.F_CMD | Packet.F_RESP)
 class EnableHijackingResponse(Packet):
     """
     Hijacking response.
     """
+
     def __init__(self):
-        super().__init__(Packet.OP_ENABLE_HIJACKING, bytes([]), Packet.F_CMD | Packet.F_RESP)
+        super().__init__(Packet.OP_ENABLE_HIJACKING,
+                         bytes([]), Packet.F_CMD | Packet.F_RESP)
 
     @staticmethod
     def from_raw(packet):
@@ -691,13 +749,28 @@ class SendPacketCommand(Packet):
     """
     Send a BLUETOOTH_LE_LL packet.
     """
+
     def __init__(self, payload):
         super().__init__(Packet.OP_SEND_PKT, payload, Packet.F_CMD)
- 
+
+
 class SendTestPacketCommand(Packet):
-    
-    def __init__(self):
-        super().__init__(Packet.OP_SEND_TEST_PKT, bytes([]), Packet.F_CMD) 
+    print("SendTestPacket")
+
+    def __init__(self, payload):
+        super().__init__(Packet.OP_SEND_TEST_PKT, payload, Packet.F_CMD)
+
+
+class ReceiveTestPacketCommand(Packet):
+    """
+    Copied from EnableAdvertisementsSniffing
+    """
+    print("ReceiveTestPacket")
+
+    def __init__(self, channel):
+        # operation 0x03: enable sniffing
+        payload = pack('<BB', 0x03, channel)
+        super().__init__(Packet.OP_RECEIVE_TEST_PKT, payload, Packet.F_CMD)
 
 
 @register_packet(Packet.OP_SEND_PKT, Packet.F_CMD | Packet.F_RESP)
@@ -705,6 +778,7 @@ class SendPacketResponse(Packet):
     """
     Send packet response
     """
+
     def __init__(self):
         super().__init__(Packet.OP_SEND_PKT, bytes([]), Packet.F_CMD | Packet.F_RESP)
 
@@ -718,6 +792,7 @@ class CrcNotification(Packet):
     """
     Crc notification
     """
+
     def __init__(self, access_address, crc):
         """
         Constructor
@@ -732,19 +807,22 @@ class CrcNotification(Packet):
         access_address, crc = unpack('<II', packet.data[:8])
         return CrcNotification(access_address, crc)
 
+
 @register_packet(Packet.N_CHANNEL_MAP, Packet.F_NOTIFICATION)
 class ChannelMapNotification(Packet):
     """
     Channel map notification.
     """
+
     def __init__(self, access_address, channel_map):
         """
         Constructor
         """
         self.access_address = access_address
         self.channel_map = channel_map
-        #print(hex(self.channel_map))
-        payload = pack('<IIB', self.access_address, self.channel_map&0xffffffff, (self.channel_map & 0xff00000000)>>32)
+        # print(hex(self.channel_map))
+        payload = pack('<IIB', self.access_address, self.channel_map &
+                       0xffffffff, (self.channel_map & 0xff00000000) >> 32)
         super().__init__(Packet.N_CHANNEL_MAP, payload, Packet.F_NOTIFICATION)
 
     @staticmethod
@@ -758,6 +836,7 @@ class HopIntervalNotification(Packet):
     """
     Hop interval notification.
     """
+
     def __init__(self, access_address, interval):
         self.access_address = access_address
         self.interval = interval
@@ -768,6 +847,7 @@ class HopIntervalNotification(Packet):
     def from_raw(packet):
         access_address, interval = unpack('<IH', packet.data[:6])
         return HopIntervalNotification(access_address, interval)
+
 
 @register_packet(Packet.N_HOP_INCREMENT, Packet.F_NOTIFICATION)
 class HopIncrementNotification(Packet):
@@ -782,6 +862,7 @@ class HopIncrementNotification(Packet):
         access_address, increment = unpack('<IB', packet.data[:6])
         return HopIncrementNotification(access_address, increment)
 
+
 @register_packet(Packet.N_PACKET, Packet.F_NOTIFICATION)
 class BlePacketNotification(Packet):
     def __init__(self, data):
@@ -791,6 +872,7 @@ class BlePacketNotification(Packet):
     @staticmethod
     def from_raw(packet):
         return BlePacketNotification(packet.data)
+
 
 @register_packet(Packet.N_PACKET_NORDIC, Packet.F_NOTIFICATION)
 class NordicTapPacketNotification(Packet):
@@ -807,7 +889,6 @@ class NordicTapPacketNotification(Packet):
     @staticmethod
     def from_raw(packet):
         return NordicTapPacketNotification(packet.data)
-
 
 
 @register_packet(Packet.N_ADVERTISEMENTS, Packet.F_NOTIFICATION)
@@ -844,6 +925,7 @@ class HijackStatusNotification(Packet):
     def from_raw(packet):
         return HijackStatusNotification(packet.data)
 
+
 @register_packet(Packet.N_CONN_LOST, Packet.F_NOTIFICATION)
 class ConnectionLostNotification(Packet):
     """
@@ -857,10 +939,11 @@ class ConnectionLostNotification(Packet):
     def from_raw(packet):
         return ConnectionLostNotification()
 
+
 @register_packet(Packet.N_CONN_REQ, Packet.F_NOTIFICATION)
 class ConnectionRequestNotification(Packet):
     def __init__(self, inita, adva, access_address, crc_init, win_size, win_offset, hop_interval, latency, timeout, channel_map, hop_increment):
-        self.inita =inita
+        self.inita = inita
         self.adva = adva
         self.access_address = access_address
         self.crc_init = crc_init
@@ -875,7 +958,7 @@ class ConnectionRequestNotification(Packet):
             '<IHBBHHHHBBBBBB',
             access_address,
             crc_init & 0xffff,
-            (crc_init & 0xff0000)>>16,
+            (crc_init & 0xff0000) >> 16,
             win_size,
             win_offset,
             hop_interval,
@@ -905,7 +988,8 @@ class ConnectionRequestNotification(Packet):
         # first 4 bytes are used to store the access address
         access_address = unpack('<I', packet.data[14:18])[0]
         # next 3 bytes contain the CRCInit value
-        crc_init = packet.data[18] | (packet.data[19] << 8) | (packet.data[20] << 16)
+        crc_init = packet.data[18] | (
+            packet.data[19] << 8) | (packet.data[20] << 16)
         # next byte is winsize
         win_size = packet.data[21]
         # next 2 bytes is the winoffset

@@ -34,9 +34,12 @@ class Supervisor(object):
     def process_packets(self):
         packets = self.interface.read_packet()
         if len(packets) > 0:
+            print("Packet in process_packets > 0")
             for pkt in packets:
                 pkt = PacketRegistry.decode(pkt)
                 self.on_packet_received(pkt)
+        else:
+            print("Empty packet")
 
     def on_packet_received(self, packet):
         if isinstance(packet, VerbosePacket):
@@ -78,20 +81,86 @@ class SendTestPacket(Supervisor):
         super().__init__()
         self.channel = channel
 
-       # Pick first device as we only want to use one
+        # Pick first device as we only want to use one
         if devices is not None:
+            # TODO Zugriff auf devices[0] machen?
             if len(devices) >= 1:
                 self.interface = SingleSnifferInterface(devices[0], baudrate)
             else:
                 raise DeviceError('No device provided')
         else:
             self.interface = SingleSnifferInterface()
+            print("SendTestPacketSupervisor")
 
     def send_test_packet(self, packet):
         """
         Send a test packet.
         """
-        self.sent_packet = self.interface.send_packet(packet)
+        self.interface.send_test_packet(packet)
+
+
+class ReceiveTestPacket(Supervisor):
+    """
+    copied from AdvertisementsSniffer supervisor without changes.
+
+    This supervisor allow to configure the sniffer as a sniffer for advertisements, according to
+     the provided policy. 
+    """
+    STATE_IDLE = 0
+    STATE_SNIFFING = 1
+
+    def __init__(self, devices=None, baudrate=115200, channel=37, policy={"policy_type": "blacklist", "rules": []}, accept_invalid_crc=False):
+        super().__init__()
+        self.channel = channel
+        self.policy = policy
+        self.accept_invalid_crc = accept_invalid_crc
+        self.state = self.STATE_IDLE
+
+        # Configure the devices.
+        if devices is not None:
+            self.interface = MultiSnifferInterface(
+                len(devices), baudrate, devices)
+        else:
+            self.interface = MultiSnifferInterface(3)
+
+        # Configure the filtering policy.
+        self.interface.reset_filtering_policy(self.policy["policy_type"])
+        for rule in self.policy["rules"]:
+            self.interface.add_rule(
+                rule["pattern"], rule["mask"], rule["position"])
+
+        self.enable_adv_sniffing()
+
+    def enable_adv_sniffing(self):
+        # Enable advertisement sniffing.
+        if self.interface.enable_advertisements_sniffing(self.channel):
+            self.state = self.STATE_SNIFFING
+        else:
+            print("Error occured when attempted to put radio into sniffing mode")
+
+    def disable_adv_sniffing(self):
+        if self.interface.disable_advertisements_sniffing():
+            self.state = self.STATE_IDLE
+        else:
+            print("Error occured when attempted to disable radios sniffing mode")
+
+    def on_advertisements_response(self, packet):
+        pass
+
+    def on_packet_received(self, packet):
+        """
+        Dispatch received packets.
+        """
+        if isinstance(packet, VerbosePacket) or isinstance(packet, DebugPacket):
+            super().on_packet_received(packet)
+        else:
+            if isinstance(packet, AdvertisementsResponse):
+                self.on_advertisements_response(packet)
+            elif isinstance(packet, AdvertisementsPacketNotification):
+                if self.state == self.STATE_SNIFFING:
+                    # Checks if the CRC is valid or if the accept_invalid_crc option is set
+                    if packet.crc_ok == 0x01 or (packet.crc_ok == 0x00 and self.accept_invalid_crc):
+                        self.on_adv_packet(packet)
 
 
 class AdvertisementsJammer(Supervisor):
@@ -229,12 +298,8 @@ class AccessAddressSniffer(Supervisor):
         else:
             self.interface = SingleSnifferInterface()
 
-        # reset interface
-        self.interface.reset()
-
-        # reset AA dictionary
-        self.aad = {}
-        self.interface.scan_access_addresses()
+        # send packet
+        self.interface.send_test_packet()
 
     def on_packet_received(self, packet):
         """

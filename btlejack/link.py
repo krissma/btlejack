@@ -7,16 +7,18 @@ from serial.tools.list_ports import comports
 from struct import pack, unpack
 from threading import Lock
 from btlejack.packets import (Packet, PacketRegistry, ResetCommand,
-    VersionCommand, ScanConnectionsCommand, RecoverCrcInitCommand,
-    RecoverResponse, ResetResponse, VersionResponse, ScanConnectionsResponse,
-    AccessAddressNotification, SniffConnReqCommand, SniffConnReqResponse,
-    ConnectionRequestNotification, EnableJammingCommand, EnableJammingResponse,
-    EnableHijackingCommand, EnableHijackingResponse)
+                              VersionCommand, ScanConnectionsCommand, RecoverCrcInitCommand,
+                              RecoverResponse, ResetResponse, VersionResponse, ScanConnectionsResponse,
+                              AccessAddressNotification, SniffConnReqCommand, SniffConnReqResponse,
+                              ConnectionRequestNotification, EnableJammingCommand, EnableJammingResponse,
+                              EnableHijackingCommand, EnableHijackingResponse)
+
 
 class DeviceError(Exception):
     """
     Device error
     """
+
     def __init__(self, message):
         self._message = message
         super().__init__(self)
@@ -95,6 +97,7 @@ class Link(object):
         """
         Send a packet
         """
+        print("Writing ", packet)
         self.lock.acquire()
         raw_pkt = packet.toBytes()
         result = self.interface.write(raw_pkt)
@@ -109,10 +112,13 @@ class Link(object):
 
         # append data
         self.rx_buffer += self.interface.read()
+        print("async_read")
 
         # ensure first byte start with 0xbc
         if len(self.rx_buffer) > 0:
+            print("Buffer lang genug")
             if self.rx_buffer[0] != 0xbc:
+                print("falsches byte")
                 try:
                     pkt_start = self.rx_buffer.index(0xbc)
                     self.rx_buffer = self.rx_buffer[pkt_start:]
@@ -201,7 +207,8 @@ class Link(object):
         """
         Recover an existing connection.
         """
-        self.write(RecoverCrcInitCommand(access_address, channel_map, hop_interval))
+        self.write(RecoverCrcInitCommand(
+            access_address, channel_map, hop_interval))
         self.wait_packet(RecoverResponse)
         while True:
             # get packet

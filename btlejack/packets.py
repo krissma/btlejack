@@ -134,10 +134,14 @@ class Packet(object):
         if _crc == data[-1]:
             # parse operation and flags
             op = data[1] & 0x0F
+            #print("Op in fromBytes: ", op)
             flags = (data[1] >> 4) & 0x0F
+            #print("Flags in fromBytes: ", flags)
+            #print("Data in fromBytes: ", data)
 
             # get packet size
             pkt_size = unpack('<H', data[2:4])[0]
+            #print("Packet size in fromBytes: ", pkt_size)
 
             # check size
             if pkt_size == len(data) - 5:
@@ -754,18 +758,19 @@ class SendPacketCommand(Packet):
         super().__init__(Packet.OP_SEND_PKT, payload, Packet.F_CMD)
 
 
+@register_packet(Packet.OP_SEND_TEST_PKT, Packet.F_CMD)
 class SendTestPacketCommand(Packet):
-    print("SendTestPacket")
 
     def __init__(self, payload):
-        super().__init__(Packet.OP_SEND_TEST_PKT, payload, Packet.F_CMD)
+        print("Initialising send test packet command")
+        super().__init__(Packet.OP_SEND_PKT, payload, Packet.F_CMD | Packet.F_NOTIFICATION)
 
 
 class ReceiveTestPacketCommand(Packet):
     """
     Copied from EnableAdvertisementsSniffing
     """
-    print("ReceiveTestPacket")
+    # print("ReceiveTestPacket")
 
     def __init__(self, channel):
         # operation 0x03: enable sniffing

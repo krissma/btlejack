@@ -336,6 +336,7 @@ class PromptThread(Thread):
 class CLIAdvertisementsJammer(AdvertisementsJammer):
 
     def __init__(self, devices=None, output=None, verbose=None, channel=37, pattern=b"", position=0):
+        print("This pattern arrives at CLIAdvertismentsJammer", pattern)
         super().__init__(devices=devices, channel=channel, pattern=pattern, position=position)
         self.output = output
         self.verbose = verbose
@@ -372,7 +373,9 @@ class CLIAdvertisementsSniffer(AdvertisementsSniffer):
         super().__init__(devices=devices, channel=channel,
                          policy=policy, accept_invalid_crc=accept_invalid_crc)
         self.output = output
+        # print("CLIAdvertisment sniffer output = ", output)
         self.verbose = verbose
+        # print("CLIAdvertisment sniffer verbose = ", verbose)
         self.display_raw = display_raw
         self.no_stdout = no_stdout
         # Display sniffer version
@@ -445,14 +448,32 @@ class CLIAdvertisementsSniffer(AdvertisementsSniffer):
 class CLISendTestPacket(SendTestPacket):
 
     def __init__(self, devices=None, verbose=None, channel=37):
-        super().__init__(devices=devices, channel=channel)
-        self.verbose = verbose
+        super().__init__(devices=devices, channel=37)
+        self.verbose = True
         self.send_test_packet()
 
     def send_test_packet(self):
-        print("In CLISendTestPacket")
-        payload = bytes([0x03, 0x02, 0x02, 0x02])
-        print("Sending this", payload)
+        # print("In CLISendTestPacket")
+        payload = bytes([0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+                         0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+                         0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+                         0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+                         0xAA, 0xAA, 0xAA, 0xAA, 0xAA])
+
+        # payload = bytes([0x40, 0x18, 0xe2, 0x6b, 0xc1, 0x1e, 0x0d, 0x4e,
+        #  0x02, 0x01, 0x02, 0x0b, 0x09, 0x4d, 0x6f, 0x74, 0x6f, 0x20, 0x47, 0x20,
+        # 0x28, 0x35, 0x29, 0x02, 0x0a, 0xc4])
+
+        # payload = bytes([0x20, 0x25, 0x5b, 0xdd, 0xcc, 0x9d, 0xcb, 0xfd, 0x02, 0x01, 0x06, 0x1b, 0xff, 0x57, 0x01, 0x02, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        # 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        # 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+        # 0xAA, 0x03, 0xfd, 0xcb, 0x9d, 0xcc, 0xdd])
+        # payload = bytes([0x11, 0x11, 0x11, 0x11, 0x11,
+        # 0x11, 0x11, 0x11, 0x11, 0x11,
+        # 0x11, 0x11, 0x11, 0x11, 0x11,
+        # 0x11, 0x11, 0x11, 0x11, 0x11,
+        # 0x11, 0x11, 0x11, 0x11, 0x11])
+        # print("Sending this", payload)
         super().send_test_packet(payload)
 
 

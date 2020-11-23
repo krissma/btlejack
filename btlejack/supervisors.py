@@ -33,13 +33,12 @@ class Supervisor(object):
 
     def process_packets(self):
         packets = self.interface.read_packet()
+        if (packets != []):
+            print("packets in process_packets: ", packets)
         if len(packets) > 0:
-            print("Packet in process_packets > 0")
             for pkt in packets:
                 pkt = PacketRegistry.decode(pkt)
                 self.on_packet_received(pkt)
-        else:
-            print("Empty packet")
 
     def on_packet_received(self, packet):
         if isinstance(packet, VerbosePacket):
@@ -77,7 +76,7 @@ class SendTestPacket(Supervisor):
     Test packet supervisor. Allows to send a packet for testing.
     """
 
-    def __init__(self, devices=None, baudrate=115200, channel=37):
+    def __init__(self, devices=None, baudrate=115200, channel=38):
         super().__init__()
         self.channel = channel
 
@@ -90,13 +89,17 @@ class SendTestPacket(Supervisor):
                 raise DeviceError('No device provided')
         else:
             self.interface = SingleSnifferInterface()
-            print("SendTestPacketSupervisor")
+            # print("SendTestPacketSupervisor")
 
     def send_test_packet(self, packet):
         """
         Send a test packet.
         """
         self.interface.send_test_packet(packet)
+
+    def on_packet_received(self, packet):
+        print("Overriding on_packet_received")
+        super().on_packet_received(packet)
 
 
 class ReceiveTestPacket(Supervisor):
@@ -151,6 +154,7 @@ class ReceiveTestPacket(Supervisor):
         """
         Dispatch received packets.
         """
+        #print("In on_packet_received")
         if isinstance(packet, VerbosePacket) or isinstance(packet, DebugPacket):
             super().on_packet_received(packet)
         else:
@@ -182,6 +186,7 @@ class AdvertisementsJammer(Supervisor):
                 len(devices), baudrate, devices)
         else:
             self.interface = MultiSnifferInterface(3)
+        print("Calling enable_adv_jamming in _init in supervisors.py now")
         self.enable_adv_jamming(self.channel, self.pattern, self.position)
 
     def enable_adv_jamming(self, channel, pattern, position):
@@ -224,8 +229,11 @@ class AdvertisementsSniffer(Supervisor):
     def __init__(self, devices=None, baudrate=115200, channel=37, policy={"policy_type": "blacklist", "rules": []}, accept_invalid_crc=False):
         super().__init__()
         self.channel = channel
+        print("Advertisement channel sets channel to ", channel)
         self.policy = policy
-        self.accept_invalid_crc = accept_invalid_crc
+        # TODO, change this back
+        self.accept_invalid_crc = True
+        #self.accept_invalid_crc = accept_invalid_crc
         self.state = self.STATE_IDLE
 
         # Configure the devices.
@@ -233,7 +241,8 @@ class AdvertisementsSniffer(Supervisor):
             self.interface = MultiSnifferInterface(
                 len(devices), baudrate, devices)
         else:
-            self.interface = MultiSnifferInterface(3)
+            # TODO: This should be 3, changed to 2 for testing reasons
+            self.interface = MultiSnifferInterface(2)
 
         # Configure the filtering policy.
         self.interface.reset_filtering_policy(self.policy["policy_type"])
@@ -246,6 +255,7 @@ class AdvertisementsSniffer(Supervisor):
     def enable_adv_sniffing(self):
         # Enable advertisement sniffing.
         if self.interface.enable_advertisements_sniffing(self.channel):
+            #print("In enable_adv_sniffing in supervisors.py")
             self.state = self.STATE_SNIFFING
         else:
             print("Error occured when attempted to put radio into sniffing mode")

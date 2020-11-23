@@ -112,13 +112,11 @@ class Link(object):
 
         # append data
         self.rx_buffer += self.interface.read()
-        print("async_read")
+        # print("async_read")
 
         # ensure first byte start with 0xbc
         if len(self.rx_buffer) > 0:
-            print("Buffer lang genug")
             if self.rx_buffer[0] != 0xbc:
-                print("falsches byte")
                 try:
                     pkt_start = self.rx_buffer.index(0xbc)
                     self.rx_buffer = self.rx_buffer[pkt_start:]
@@ -131,7 +129,8 @@ class Link(object):
             # check if we got a complete packet
             if len(self.rx_buffer) >= (pkt_size + 5):
                 # yep, parse this packet
-                packet = Packet.fromBytes(self.rx_buffer[:pkt_size+5])
+                packet = Packet.fromBytes(self.rx_buffer[:pkt_size + 5])
+                #print("Packet in read", packet)
                 self.rx_buffer = self.rx_buffer[pkt_size+5:]
                 self.lock.release()
                 return packet
@@ -147,14 +146,18 @@ class Link(object):
         packet = None
         while packet is None:
             packet = self.async_read()
+        #print("This packet was read in read in link.py", packet)
         return packet
 
     def wait_packet(self, clazz):
         """
         Wait for a specific packet type.
         """
+        print("wait_packet in link.py")
         while True:
             pkt = PacketRegistry.decode(self.read())
+            print("This is the packet we are receiving in wait_packet: ", pkt)
+            print("Variable clazz in wait_packet: ", clazz)
             if isinstance(pkt, clazz):
                 return pkt
 

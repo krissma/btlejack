@@ -26,12 +26,13 @@ class SingleSnifferInterface(AbstractInterface):
         """
         self.link = Link(interface=device, baudrate=115200)
         super().__init__(self.link)
+        #print("Initating MicroBit as SingleSnifferInterface")
 
         # reset and request version.
         # TODO uncomment reset
-        # self.link.reset()
-        print("Now we are checking the version")
-        #self.version = self.link.get_version()
+        self.link.reset()
+        # print("Now we are checking the version")
+        self.version = self.link.get_version()
 
     def get_version(self):
         """
@@ -61,11 +62,14 @@ class SingleSnifferInterface(AbstractInterface):
         self.link.set_timeout(timeout)
 
     def send_test_packet(self, packet):
+
         self.link.write(SendTestPacketCommand(packet))
-        print("SendTestPacketCommand with packet ", packet)
+        #print("SendTestPacketCommand with packet ", packet)
 
         """
         Send packet if not idling. (synchronous)
+
+        self.
         if not self.is_idling():
             self.link.write(
                 SendTestPacketCommand(packet)
@@ -78,7 +82,7 @@ class SingleSnifferInterface(AbstractInterface):
 
     def scan_access_addresses(self):
         """
-        Scan access addresses (synchronous).
+        Scan access addresses(synchronous).
 
         Sends a command switching link into AA scanning mode.
         """
@@ -98,7 +102,7 @@ class SingleSnifferInterface(AbstractInterface):
 
     def recover_chm(self, access_address, crcinit, start, stop, timeout):
         """
-        Recover channel map (distributed over sniffers)
+        Recover channel map(distributed over sniffers)
 
         @param access_address   int     target access address
         @param crcinit          int     CRCInit value
@@ -130,7 +134,7 @@ class SingleSnifferInterface(AbstractInterface):
 
     def read_packet(self):
         """
-        Read packet if one is ready (asynchroous)
+        Read packet if one is ready(asynchroous)
         """
         packets = []
         packet = self.link.async_read()
@@ -140,7 +144,7 @@ class SingleSnifferInterface(AbstractInterface):
 
     def enable_advertisements_reactive_jamming(self, channel, pattern, position):
         """
-        Enable Advertisements jamming (synchronous).
+        Enable Advertisements jamming(synchronous).
 
         Sends a command switching link into Advertisements reactive Jamming mode.
         """
@@ -164,12 +168,15 @@ class SingleSnifferInterface(AbstractInterface):
 
     def enable_advertisements_sniffing(self, channel):
         """
-        Enable Advertisements sniffing (synchronous).
+        Enable Advertisements sniffing(synchronous).
 
         Sends a command switching link into Advertisements sniffing mode.
         """
         self.link.write(EnableAdvertisementsSniffingCommand(channel))
+        print("Enabling advertisement sniffing on channel ", channel)
+        # TODO uncomment this!!!
         pkt = self.link.wait_packet(AdvertisementsResponse)
+        print(pkt)
         super().sniff_advertisements()
         return (pkt.response_type == 0x03 and pkt.status == 0)
 
@@ -177,7 +184,7 @@ class SingleSnifferInterface(AbstractInterface):
         """
         Reset filtering policy.
 
-        Sends a command reseting the filtering policy to the provided filtering mode ("whitelist" or "blacklist").
+        Sends a command reseting the filtering policy to the provided filtering mode("whitelist" or "blacklist").
         """
         self.link.write(ResetFilteringPolicyCommand(policy_type))
 
@@ -191,7 +198,7 @@ class SingleSnifferInterface(AbstractInterface):
 
     def disable_advertisements_sniffing(self):
         """
-        Disable Advertisements sniffing (synchronous).
+        Disable Advertisements sniffing(synchronous).
 
         Sends a command disabling Advertisements sniffing mode.
         """
@@ -209,7 +216,7 @@ class MultiSnifferInterface(AbstractInterface):
     the corresponding resources.
     """
 
-    def __init__(self, max_number_sniffers=1, baudrate=115200, devices=None):
+    def __init__(self, max_number_sniffers=3, baudrate=115200, devices=None):
         super().__init__(None)
         self.interfaces = []
 
@@ -228,6 +235,7 @@ class MultiSnifferInterface(AbstractInterface):
 
         self.active_link = None
         self.connect(max_number_sniffers, baudrate)
+        # TODO: uncomment reset again
         self.reset()
 
     def get_version(self):
@@ -328,7 +336,7 @@ class MultiSnifferInterface(AbstractInterface):
 
     def scan_access_addresses(self):
         """
-        Scan access addresses (synchronous).
+        Scan access addresses(synchronous).
 
         Sends a command switching link into AA scanning mode.
         """
@@ -391,6 +399,7 @@ class MultiSnifferInterface(AbstractInterface):
 
         Sends a command switching links into Advertisements sniffing mode.
         """
+        print("In enable_advertisements_sniffing in jobs.py")
         if channel == 37:
             channels = [37, 38, 39]
         elif channel == 38:
@@ -408,6 +417,7 @@ class MultiSnifferInterface(AbstractInterface):
 
         Sends a command switching links into Advertisements reactive jamming mode.
         """
+        print("Arriving at enable_advertisements_reactive_jamming in jobs.py")
         if channel == 37:
             channels = [37, 38, 39]
         elif channel == 38:
@@ -450,7 +460,7 @@ class MultiSnifferInterface(AbstractInterface):
 
     def disable_advertisements_sniffing(self):
         """
-        Disable Advertisements sniffing (synchronous).
+        Disable Advertisements sniffing(synchronous).
 
         Sends a command disabling Advertisements sniffing mode.
         """
@@ -459,7 +469,7 @@ class MultiSnifferInterface(AbstractInterface):
 
     def read_packet(self):
         """
-        Read packet(s) if one is ready (asynchroous)
+        Read packet(s) if one is ready(asynchroous)
         """
         packets = []
         if (self.mode == self.MODE_RECOVER_CHM or

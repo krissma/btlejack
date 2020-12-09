@@ -235,7 +235,6 @@ class MultiSnifferInterface(AbstractInterface):
 
         self.active_link = None
         self.connect(max_number_sniffers, baudrate)
-        # TODO: uncomment reset again
         self.reset()
 
     def get_version(self):
@@ -325,7 +324,9 @@ class MultiSnifferInterface(AbstractInterface):
         """
 
         self.active_link = None
-        channels = [37, 38, 39]
+        # TODO: change this back!!
+        #channels = [37, 38, 39]
+        channels = [60, 10, 30]
 
         # initialize jobs
         for i, link in enumerate(self.interfaces[:len(channels)]):
@@ -400,12 +401,14 @@ class MultiSnifferInterface(AbstractInterface):
         Sends a command switching links into Advertisements sniffing mode.
         """
         print("In enable_advertisements_sniffing in jobs.py")
-        if channel == 37:
-            channels = [37, 38, 39]
-        elif channel == 38:
-            channels = [38, 39, 37]
-        else:
-            channels = [39, 37, 38]
+        # TODO: changed channels here, change it back!!!
+        channels = [channel, channel+1, channel+2]
+        # if channel == 37:
+        #channels = [37, 38, 39]
+        # elif channel == 38:
+        #channels = [38, 39, 37]
+        # else:
+        #channels = [39, 37, 38]
         super().sniff_advertisements()
         for i, link in enumerate(self.interfaces):
             link.enable_advertisements_sniffing(channels[i])

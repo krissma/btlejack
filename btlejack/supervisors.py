@@ -34,6 +34,7 @@ class Supervisor(object):
     def process_packets(self):
         packets = self.interface.read_packet()
         if (packets != []):
+            # if (len(packets) == 8):
             print("packets in process_packets: ", packets)
         if len(packets) > 0:
             for pkt in packets:
@@ -62,6 +63,7 @@ class Supervisor(object):
         """
         Called when a verbose packet is received from the sniffer.
         """
+        print("In verbose")
         print('V:'+str(packet))
 
     def on_debug(self, packet):
@@ -242,7 +244,7 @@ class AdvertisementsSniffer(Supervisor):
                 len(devices), baudrate, devices)
         else:
             # TODO: This should be 3, changed to 2 for testing reasons
-            self.interface = MultiSnifferInterface(2)
+            self.interface = MultiSnifferInterface(3)
 
         # Configure the filtering policy.
         self.interface.reset_filtering_policy(self.policy["policy_type"])

@@ -153,11 +153,11 @@ class Link(object):
         """
         Wait for a specific packet type.
         """
-        print("wait_packet in link.py")
+        #print("wait_packet in link.py")
         while True:
             pkt = PacketRegistry.decode(self.read())
-            print("This is the packet we are receiving in wait_packet: ", pkt)
-            print("Variable clazz in wait_packet: ", clazz)
+            #print("This is the packet we are receiving in wait_packet: ", pkt)
+            #print("Variable clazz in wait_packet: ", clazz)
             if isinstance(pkt, clazz):
                 return pkt
 

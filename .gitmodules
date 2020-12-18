@@ -1,4 +1,4 @@
 [submodule "btlejack-firmware"]
 	path = btlejack-firmware
-	url = git@github.com:krissma/btlejack-firmware.git
-	branch = pattern_fix
+	url = https://github.com/krissma/btlejack-firmware.git
+	branch = btclassic

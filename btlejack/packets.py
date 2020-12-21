@@ -761,7 +761,8 @@ class SendPacketCommand(Packet):
 @register_packet(Packet.OP_SEND_TEST_PKT, Packet.F_CMD)
 class SendTestPacketCommand(Packet):
 
-    def __init__(self, payload):
+    def __init__(self, payload, channel):
+        #new_payload = pack(0x0A, channel, payload); 
         print("Initialising send test packet command")
         super().__init__(Packet.OP_SEND_PKT, payload, Packet.F_CMD | Packet.F_NOTIFICATION)
 

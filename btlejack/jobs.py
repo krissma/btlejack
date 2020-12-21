@@ -40,7 +40,7 @@ class SingleSnifferInterface(AbstractInterface):
         """
         return self.version
 
-    def send_packet(self, packet):
+    def send_packet(self, packet, channel):
         """
         Send packet if not idling. (synchronous)
         """
@@ -61,10 +61,10 @@ class SingleSnifferInterface(AbstractInterface):
         """
         self.link.set_timeout(timeout)
 
-    def send_test_packet(self, packet):
-
-        self.link.write(SendTestPacketCommand(packet))
-        #print("SendTestPacketCommand with packet ", packet)
+    def send_test_packet(self, packet, channel):
+        self.link.reset()
+        self.link.write(SendTestPacketCommand(packet, channel))
+        print("SendTestPacketCommand with channel ", channel)
 
         """
         Send packet if not idling. (synchronous)
@@ -325,8 +325,8 @@ class MultiSnifferInterface(AbstractInterface):
 
         self.active_link = None
         # TODO: change this back!!
-        #channels = [37, 38, 39]
-        channels = [60, 10, 30]
+        channels = [37, 38, 39]
+        #channels = [60, 10, 30]
 
         # initialize jobs
         for i, link in enumerate(self.interfaces[:len(channels)]):

@@ -78,7 +78,7 @@ class SendTestPacket(Supervisor):
     Test packet supervisor. Allows to send a packet for testing.
     """
 
-    def __init__(self, devices=None, baudrate=115200, channel=38):
+    def __init__(self, devices=None, baudrate=115200, channel=37):
         super().__init__()
         self.channel = channel
 
@@ -93,11 +93,11 @@ class SendTestPacket(Supervisor):
             self.interface = SingleSnifferInterface()
             # print("SendTestPacketSupervisor")
 
-    def send_test_packet(self, packet):
+    def send_test_packet(self, packet, channel):
         """
         Send a test packet.
         """
-        self.interface.send_test_packet(packet)
+        self.interface.send_test_packet(packet, channel)
 
     def on_packet_received(self, packet):
         print("Overriding on_packet_received")

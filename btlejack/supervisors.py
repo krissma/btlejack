@@ -243,8 +243,8 @@ class AdvertisementsSniffer(Supervisor):
             self.interface = MultiSnifferInterface(
                 len(devices), baudrate, devices)
         else:
-            # TODO: This should be 3, changed to 2 for testing reasons
-            self.interface = MultiSnifferInterface(3)
+            # TODO: This should be 3, changed to 1 for testing reasons
+            self.interface = MultiSnifferInterface(1)
 
         # Configure the filtering policy.
         self.interface.reset_filtering_policy(self.policy["policy_type"])

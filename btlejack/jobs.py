@@ -62,7 +62,7 @@ class SingleSnifferInterface(AbstractInterface):
         self.link.set_timeout(timeout)
 
     def send_test_packet(self, packet, channel):
-        self.link.reset()
+        #self.link.reset()
         self.link.write(SendTestPacketCommand(packet, channel))
         print("SendTestPacketCommand with channel ", channel)
 

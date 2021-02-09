@@ -1,3 +1,8 @@
+[submodule "btlejack"]
+	path = btlejack
+	url = https://github.com/krissma/btlejack.git
+	branch = btclassic_new
+
 [submodule "btlejack-firmware"]
 	path = btlejack-firmware
 	url = https://github.com/krissma/btlejack-firmware.git

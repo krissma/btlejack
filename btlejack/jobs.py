@@ -47,6 +47,11 @@ class SingleSnifferInterface(AbstractInterface):
             return True
         return False
 
+    def send_test_packet(self, packet):
+
+        self.link.write(SendTestPacketCommand(packet))
+        
+
     def set_timeout(self, timeout):
         """
         Set underlying interface timeout (Link).
@@ -116,15 +121,21 @@ class SingleSnifferInterface(AbstractInterface):
             packets.append(packet)
         return packets
 
-    def enable_advertisements_reactive_jamming(self,channel,pattern,position):
+    def enable_advertisements_reactive_jamming(self,channel,mode, pattern,position):
         """
         Enable Advertisements jamming (synchronous).
 
         Sends a command switching link into Advertisements reactive Jamming mode.
         """
-        self.link.write(EnableReactiveJammingCommand(channel=channel,pattern=pattern,position=position))
-        self.link.wait_packet(AdvertisementsResponse)
-        super().jam_advertisements()
+        if (mode == 0x02 or mode == 0x1):
+            super().jam_advertisements()
+            self.link.write(EnableReactiveJammingCommand(channel=channel, mode=mode, pattern=pattern, position=position))
+            pkt = self.link.wait_packet(AdvertisementsResponse)
+            return (pkt.response_type == 0x05 and pkt.status == 0)
+        else: 
+            self.link.write(EnableReactiveJammingCommand(channel=channel,mode=mode, pattern=pattern,position=position))
+            self.link.wait_packet(AdvertisementsResponse)
+            super().jam_advertisements()
         return True
 
     def disable_advertisements_reactive_jamming(self):
@@ -135,13 +146,13 @@ class SingleSnifferInterface(AbstractInterface):
         """
         self.link.write(DisableReactiveJammingCommand())
 
-    def enable_advertisements_sniffing(self,channel):
+    def enable_advertisements_sniffing(self,channel, mode):
         """
         Enable Advertisements sniffing (synchronous).
 
         Sends a command switching link into Advertisements sniffing mode.
         """
-        self.link.write(EnableAdvertisementsSniffingCommand(channel))
+        self.link.write(EnableAdvertisementsSniffingCommand(channel, mode))
         pkt = self.link.wait_packet(AdvertisementsResponse)
         super().sniff_advertisements()
         return (pkt.response_type == 0x03 and pkt.status == 0)
@@ -179,7 +190,7 @@ class MultiSnifferInterface(AbstractInterface):
     the corresponding resources.
     """
 
-    def __init__(self, max_number_sniffers=1, baudrate=115200, devices=None):
+    def __init__(self, max_number_sniffers=3, baudrate=115200, devices=None):
         super().__init__(None)
         self.interfaces = []
 
@@ -347,7 +358,7 @@ class MultiSnifferInterface(AbstractInterface):
         super().recover_chm()
 
 
-    def enable_advertisements_sniffing(self,channel):
+    def enable_advertisements_sniffing(self,channel,mode):
         """
         Enable Advertisements sniffing.
 
@@ -357,14 +368,21 @@ class MultiSnifferInterface(AbstractInterface):
             channels = [37,38,39]
         elif channel == 38:
             channels = [38,39,37]
+        elif (mode == 0x02):
+            if (channel == 87):
+                channels = [channel, 0, 1]
+            elif (channel == 86):
+                channels = [channel, channel + 1, 0]
+            else: 
+                channels = [channel, channel+1, channel+2]    
         else:
             channels = [39,37,38]
         super().sniff_advertisements()
         for i,link in enumerate(self.interfaces):
-            link.enable_advertisements_sniffing(channels[i])
+            link.enable_advertisements_sniffing(channels[i], mode)
         return True
 
-    def enable_advertisements_reactive_jamming(self,channel,pattern,position):
+    def enable_advertisements_reactive_jamming(self,channel,mode,pattern,position):
         """
         Enable Advertisements reactive jamming.
 
@@ -374,11 +392,18 @@ class MultiSnifferInterface(AbstractInterface):
             channels = [37,38,39]
         elif channel == 38:
             channels = [38,39,37]
+        elif (mode == 0x02):
+            if (channel == 87):
+                channels = [channel, 0, 1]
+            elif (channel == 86):
+                channels = [channel, channel + 1, 0]
+            else: 
+                channels = [channel, channel+1, channel+2]    
         else:
             channels = [39,37,38]
         super().jam_advertisements()
         for i,link in enumerate(self.interfaces):
-            link.enable_advertisements_reactive_jamming(channels[i],pattern,position)
+            link.enable_advertisements_reactive_jamming(channels[i],mode,pattern,position)
         return True
 
     def disable_advertisements_reactive_jamming(self):

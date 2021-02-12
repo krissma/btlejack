@@ -5,7 +5,7 @@ from time import time
 from threading import Thread, Lock
 from halo import Halo
 
-from .supervisors import ConnectionRecovery, AccessAddressSniffer, ConnectionSniffer,AdvertisementsSniffer,AdvertisementsJammer
+from .supervisors import ConnectionRecovery, AccessAddressSniffer, ConnectionSniffer,AdvertisementsSniffer,AdvertisementsJammer, SendTestPacket
 from .pcap import PcapBleWriter, PcapNordicTapWriter, PcapBlePHDRWriter
 from .helpers import bytes_to_bd_addr
 
@@ -327,8 +327,8 @@ class PromptThread(Thread):
 
 class CLIAdvertisementsJammer(AdvertisementsJammer):
 
-    def __init__(self, devices=None, output=None, verbose=None,channel=37,pattern=b"",position=0):
-        super().__init__(devices=devices,channel=channel,pattern=pattern,position=position)
+    def __init__(self, devices=None, output=None, verbose=None,channel=37,mode= 0x0, pattern=b"",position=0):
+        super().__init__(devices=devices,channel=channel,mode= 0x0, pattern=pattern,position=position)
         self.output = output
         self.verbose = verbose
 
@@ -349,8 +349,8 @@ class CLIAdvertisementsJammer(AdvertisementsJammer):
 
 class CLIAdvertisementsSniffer(AdvertisementsSniffer):
 
-    def __init__(self, devices=None, output=None, verbose=None,channel=37,policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=False,display_raw=False):
-        super().__init__(devices=devices,channel=channel,policy=policy,accept_invalid_crc=accept_invalid_crc)
+    def __init__(self, devices=None, output=None, verbose=None,channel=37,mode=0x0,policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=True,display_raw=False, no_stdout=False):
+        super().__init__(devices=devices,channel=channel,mode=mode,policy=policy,accept_invalid_crc=accept_invalid_crc)
         self.output = output
         self.verbose = verbose
         self.display_raw = display_raw
@@ -447,6 +447,17 @@ class CLIAccessAddressSniffer(AccessAddressSniffer):
         Called when a debug packet is received from the sniffer.
         """
         print('D:'+str(packet))
+
+
+class CLISendTestPacket(SendTestPacket):
+
+    def __init__(self, devices=None, verbose=None, channel=37, payload=None):
+        super().__init__(devices=devices, channel=37)
+        self.verbose = True
+        self.send_test_packet(payload)
+
+    def send_test_packet(self, payload):       
+        super().send_test_packet(payload)
 
 class CLIConnectionSniffer(ConnectionSniffer):
     """

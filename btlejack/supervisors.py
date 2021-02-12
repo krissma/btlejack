@@ -22,6 +22,10 @@ from btlejack.session import BtlejackSession, BtlejackSessionError
 from btlejack.packets import *
 from btlejack.link import DeviceError
 
+counter_jammed = 0
+counter_no_jam = 0
+
+
 class Supervisor(object):
     """
     Default supervisor class.
@@ -36,6 +40,43 @@ class Supervisor(object):
             for pkt in packets:
                 pkt = PacketRegistry.decode(pkt)
                 self.on_packet_received(pkt)
+
+    def process_packets_receiver(self, sentPacket):
+        global counter_jammed
+        global counter_no_jam
+       
+    
+        packets = self.interface.read_packet()
+        #if (packets != []):
+            #print("1. packets in process_packets: ", packets)
+        if len(packets) > 0:
+            for pkt in packets:
+                pkt = PacketRegistry.decode(pkt)
+                current_time = datetime.datetime.now()  
+                print("time: ", current_time)  
+                print("2. packets in process_packets: ", pkt)
+                self.count_packets(sentPacket, pkt)
+                self.on_packet_received(pkt)
+
+
+    def count_packets(self, packet, receivedPacket):
+        global counter_jammed
+        global counter_no_jam
+        if ((len(packet)+4) == len(receivedPacket.data)):
+            for i in range(len(packet)):
+                if (packet[i] != receivedPacket.data[i+4]):
+                    counter_jammed += 1
+                    print("This is the jam counter", counter_jammed)
+                    print("This is the no_jam counter", counter_no_jam) 
+                    return
+            counter_no_jam += 1
+            print("This is the jam counter", counter_jammed)
+            print("This is the no_jam counter", counter_no_jam)    
+            return
+        else:
+            print("packet length ", len(packet) + 4)
+            print("received packet length ", len(receivedPacket.data))
+
 
     def on_packet_received(self, packet):
         if isinstance(packet, VerbosePacket):
@@ -68,6 +109,39 @@ class Supervisor(object):
         print('D:'+str(packet))
 
 
+
+
+class SendTestPacket(Supervisor):
+    """
+    Test packet supervisor. Allows to send a packet for testing.
+    """
+
+    def __init__(self, devices=None, baudrate=115200, channel=37, payload=None):
+        super().__init__()
+        self.channel = channel
+
+        # Pick first device as we only want to use one
+        if devices is not None:
+            if len(devices) >= 1:
+                self.interface = SingleSnifferInterface(devices[0], baudrate)
+            else:
+                raise DeviceError('No device provided')
+        else:
+            self.interface = SingleSnifferInterface()
+
+
+    def send_test_packet(self, packet):
+        """
+        Send a test packet.
+        """
+        self.interface.send_test_packet(packet)
+
+    def on_packet_received(self, packet):
+        print("Overriding on_packet_received")
+        super().on_packet_received(packet)
+
+
+
 class AdvertisementsJammer(Supervisor):
     """
     Advertisements jammer supervisor.
@@ -75,8 +149,9 @@ class AdvertisementsJammer(Supervisor):
     This supervisor allow to configure the sniffer as a reactive jammer for jamming advertisements, according to
      the provided pattern. 
     """
-    def __init__(self, devices=None, baudrate=115200,channel=37,pattern=b"",position=0):
+    def __init__(self, devices=None, baudrate=115200, mode=0x0, channel=37,pattern=b"",position=0):
         super().__init__()
+        self.mode = mode 
         self.channel = channel
         self.pattern = pattern
         self.position = position
@@ -86,7 +161,15 @@ class AdvertisementsJammer(Supervisor):
         else:
             self.interface = MultiSnifferInterface(3)
 
-        self.interface.enable_advertisements_reactive_jamming(self.channel,self.pattern,self.position)
+        self.interface.enable_advertisements_reactive_jamming(self.channel, mode, self.pattern,self.position)
+
+    def enable_adv_jamming(self, channel, mode, pattern, position):
+        self.interface.enable_advertisements_reactive_jamming(
+            channel, mode, pattern, position)
+
+    def disable_adv_jamming(self):
+        if(self.interface.disable_advertisements_reactive_jamming()):
+            print("[!] Jamming could not be disabled")
 
     def on_adv_jammed(self):
         """
@@ -113,9 +196,10 @@ class AdvertisementsSniffer(Supervisor):
     STATE_IDLE = 0
     STATE_SNIFFING = 1
 
-    def __init__(self, devices=None, baudrate=115200,channel=37,policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=False):
+    def __init__(self, devices=None, baudrate=115200,channel=37, mode = 0x0, policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=False):
         super().__init__()
         self.channel = channel
+        self.mode = mode
         self.policy = policy
         self.accept_invalid_crc = accept_invalid_crc
         self.state = self.STATE_IDLE
@@ -130,6 +214,20 @@ class AdvertisementsSniffer(Supervisor):
         self.interface.reset_filtering_policy(self.policy["policy_type"])
         for rule in self.policy["rules"]:
             self.interface.add_rule(rule["pattern"],rule["mask"],rule["position"])
+
+    def enable_adv_sniffing(self):
+        # Enable advertisement sniffing.
+        if self.interface.enable_advertisements_sniffing(self.channel, self.mode):
+            #print("In enable_adv_sniffing in supervisors.py")
+            self.state = self.STATE_SNIFFING
+        else:
+            print("Error occured when attempted to put radio into sniffing mode")
+
+    def disable_adv_sniffing(self):
+        if self.interface.disable_advertisements_sniffing():
+            self.state = self.STATE_IDLE
+        else:
+            print("Error occured when attempted to disable radios sniffing mode")
 
 	# Enable advertisement sniffing.
         if self.interface.enable_advertisements_sniffing(self.channel):

@@ -47,9 +47,9 @@ class SingleSnifferInterface(AbstractInterface):
             return True
         return False
 
-    def send_test_packet(self, packet):
+    def send_test_packet(self, packet, mode, channel):
 
-        self.link.write(SendTestPacketCommand(packet))
+        self.link.write(SendTestPacketCommand(packet, mode, channel))
         
 
     def set_timeout(self, timeout):
@@ -145,6 +145,8 @@ class SingleSnifferInterface(AbstractInterface):
         Sends a command disabling Advertisements reactive jamming mode.
         """
         self.link.write(DisableReactiveJammingCommand())
+        super().reset()
+        return True
 
     def enable_advertisements_sniffing(self,channel, mode):
         """
@@ -152,6 +154,7 @@ class SingleSnifferInterface(AbstractInterface):
 
         Sends a command switching link into Advertisements sniffing mode.
         """
+        print("Enabling advertisement sniffing on channel ", channel)
         self.link.write(EnableAdvertisementsSniffingCommand(channel, mode))
         pkt = self.link.wait_packet(AdvertisementsResponse)
         super().sniff_advertisements()
@@ -181,6 +184,9 @@ class SingleSnifferInterface(AbstractInterface):
         Sends a command disabling Advertisements sniffing mode.
         """
         self.link.write(DisableAdvertisementsSniffingCommand())
+        pkt = self.link.wait_packet(AdvertisementsResponse)
+        super().reset()
+        return (pkt.response_type == 0x04 and pkt.status == 0)
 
 class MultiSnifferInterface(AbstractInterface):
     """
@@ -253,6 +259,15 @@ class MultiSnifferInterface(AbstractInterface):
         """
         if index < len(self.interfaces):
             return self.interfaces[index]
+
+    def is_idle(self):
+        """
+        Return an existing Link object.
+        """
+        for link in self.interfaces:
+            if(not link.is_idling()):
+                return False
+        return True
 
     def get_nb_interfaces(self):
         return len(self.interfaces)

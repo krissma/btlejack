@@ -327,8 +327,8 @@ class PromptThread(Thread):
 
 class CLIAdvertisementsJammer(AdvertisementsJammer):
 
-    def __init__(self, devices=None, output=None, verbose=None,channel=37,mode= 0x0, pattern=b"",position=0):
-        super().__init__(devices=devices,channel=channel,mode= 0x0, pattern=pattern,position=position)
+    def __init__(self, devices=None, output=None, verbose=None,channel=37,mode=0x0, pattern=b"",position=0):
+        super().__init__(devices=devices,channel=channel,mode=mode, pattern=pattern,position=position)
         self.output = output
         self.verbose = verbose
 
@@ -347,6 +347,13 @@ class CLIAdvertisementsJammer(AdvertisementsJammer):
     def on_adv_jammed(self):
         print("Advertisement jammed !")
 
+    def on_verbose(self, packet):
+        """
+        Called when a verbose packet is received from the sniffer.
+        """
+        if self.verbose:
+            print('> ' + str(packet.data))
+
 class CLIAdvertisementsSniffer(AdvertisementsSniffer):
 
     def __init__(self, devices=None, output=None, verbose=None,channel=37,mode=0x0,policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=True,display_raw=False, no_stdout=False):
@@ -354,6 +361,7 @@ class CLIAdvertisementsSniffer(AdvertisementsSniffer):
         self.output = output
         self.verbose = verbose
         self.display_raw = display_raw
+        self.no_stdout = no_stdout
         # Display sniffer version
         major,minor = [int(v) for v in VERSION.split('.')]
         versions = self.interface.get_version()
@@ -451,13 +459,13 @@ class CLIAccessAddressSniffer(AccessAddressSniffer):
 
 class CLISendTestPacket(SendTestPacket):
 
-    def __init__(self, devices=None, verbose=None, channel=37, payload=None):
-        super().__init__(devices=devices, channel=37)
+    def __init__(self, devices=None, verbose=None, channel=37, mode=0x0, payload=None):
+        super().__init__(devices=devices, channel=channel, mode=mode)
         self.verbose = True
-        self.send_test_packet(payload)
+        self.send_test_packet(payload, channel, mode)
 
-    def send_test_packet(self, payload):       
-        super().send_test_packet(payload)
+    def send_test_packet(self, payload, channel, mode):       
+        super().send_test_packet(payload, channel, mode)
 
 class CLIConnectionSniffer(ConnectionSniffer):
     """

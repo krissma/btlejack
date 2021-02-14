@@ -21,6 +21,7 @@ from btlejack.jobs import SingleSnifferInterface, MultiSnifferInterface
 from btlejack.session import BtlejackSession, BtlejackSessionError
 from btlejack.packets import *
 from btlejack.link import DeviceError
+import datetime 
 
 counter_jammed = 0
 counter_no_jam = 0
@@ -51,6 +52,7 @@ class Supervisor(object):
             #print("1. packets in process_packets: ", packets)
         if len(packets) > 0:
             for pkt in packets:
+                print("bla")
                 pkt = PacketRegistry.decode(pkt)
                 current_time = datetime.datetime.now()  
                 print("time: ", current_time)  
@@ -116,9 +118,10 @@ class SendTestPacket(Supervisor):
     Test packet supervisor. Allows to send a packet for testing.
     """
 
-    def __init__(self, devices=None, baudrate=115200, channel=37, payload=None):
+    def __init__(self, devices=None, baudrate=115200, channel=37, mode=0x0, payload=None):
         super().__init__()
         self.channel = channel
+        self.mode = mode
 
         # Pick first device as we only want to use one
         if devices is not None:
@@ -130,11 +133,11 @@ class SendTestPacket(Supervisor):
             self.interface = SingleSnifferInterface()
 
 
-    def send_test_packet(self, packet):
+    def send_test_packet(self, packet, channel, mode):
         """
         Send a test packet.
         """
-        self.interface.send_test_packet(packet)
+        self.interface.send_test_packet(packet, channel, mode)
 
     def on_packet_received(self, packet):
         print("Overriding on_packet_received")
@@ -158,8 +161,12 @@ class AdvertisementsJammer(Supervisor):
 
         if devices is not None:
             self.interface = MultiSnifferInterface(len(devices), baudrate, devices)
+        elif(mode == 0x01 or mode == 0x02):
+            # 1 here is for the case that one micro:bit is used for receiving, one for sending and one jamming.
+            self.interface = MultiSnifferInterface(1)
         else:
             self.interface = MultiSnifferInterface(3)
+    
 
         self.interface.enable_advertisements_reactive_jamming(self.channel, mode, self.pattern,self.position)
 
@@ -181,10 +188,15 @@ class AdvertisementsJammer(Supervisor):
         """
         Dispatch received packets.
         """
-        if isinstance(packet,VerbosePacket) and packet.data == b"ADV_JAMMED":
-            self.on_adv_jammed()
+        if isinstance(packet, VerbosePacket):
+            if(packet.data == b"ADV_JAMMED"):
+                self.on_adv_jammed()
+            else:
+                self.on_verbose(packet)
         elif isinstance(packet, VerbosePacket) or isinstance(packet, DebugPacket):
             super().on_packet_received(packet)
+
+
 
 class AdvertisementsSniffer(Supervisor):
     """
@@ -200,6 +212,7 @@ class AdvertisementsSniffer(Supervisor):
         super().__init__()
         self.channel = channel
         self.mode = mode
+        print("Advertisement channel sets channel to ", channel)
         self.policy = policy
         self.accept_invalid_crc = accept_invalid_crc
         self.state = self.STATE_IDLE
@@ -207,6 +220,9 @@ class AdvertisementsSniffer(Supervisor):
         # Configure the devices.
         if devices is not None:
             self.interface = MultiSnifferInterface(len(devices), baudrate, devices)
+        elif(mode == 0x01 or mode == 0x02):
+            # 1 here is for the case that one micro:bit is used for receiving, one for sending and one jamming.
+            self.interface = MultiSnifferInterface(1)
         else:
             self.interface = MultiSnifferInterface(3)
 
@@ -215,10 +231,11 @@ class AdvertisementsSniffer(Supervisor):
         for rule in self.policy["rules"]:
             self.interface.add_rule(rule["pattern"],rule["mask"],rule["position"])
 
+        self.enable_adv_sniffing()
+
     def enable_adv_sniffing(self):
         # Enable advertisement sniffing.
         if self.interface.enable_advertisements_sniffing(self.channel, self.mode):
-            #print("In enable_adv_sniffing in supervisors.py")
             self.state = self.STATE_SNIFFING
         else:
             print("Error occured when attempted to put radio into sniffing mode")

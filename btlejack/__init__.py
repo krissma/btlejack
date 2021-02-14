@@ -486,7 +486,7 @@ def main():
 
         try:
             # Instanciate the supervisor
-            supervisor = CLIAdvertisementsJammer(verbose=args.verbose, devices=args.devices,output=output,channel=args.channel,pattern=pattern,position=position)
+            supervisor = CLIAdvertisementsJammer(verbose=args.verbose, devices=args.devices,output=output,channel=args.channel, mode=args.mode, pattern=pattern,position=position)
         except DeviceError as error:
             print('[!] Please connect a compatible Micro:Bit in order to use BtleJack')
             sys.exit(-1)  

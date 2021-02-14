@@ -398,7 +398,7 @@ class EnableAdvertisementsSniffingCommand(Packet):
     """
     Enable Advertisements Sniffing command.
     """
-    def __init__(self, channel):
+    def __init__(self, channel, mode):
         # operation 0x03: enable sniffing
         payload = pack('<BBB', 0x03, channel, mode)
         super().__init__(Packet.OP_ADVERTISEMENTS, payload, Packet.F_CMD)
@@ -440,19 +440,19 @@ class AddRuleCommand(Packet):
         super().__init__(Packet.OP_ADVERTISEMENTS, payload, Packet.F_CMD)
 
 
-# TODO: add mode 
 class EnableReactiveJammingCommand(Packet):
     """
     Enable Reactive Jamming command.
     """
-    def __init__(self,pattern=b"",position=0,channel=37):
+    def __init__(self,pattern=b"",position=0,channel=37, mode=0x0):
         
         self.length = len(pattern)
         self.pattern = pattern
+        self.mode = mode
         self.position = position
         self.channel = channel
         # operation 0x05: enable reactive jamming
-        payload = pack('<BBBB', 0x05, self.channel,self.position,self.length)
+        payload = pack('<BBBBB', 0x05, self.channel, self.mode, self.position,self.length)
         payload += pattern
         
         super().__init__(Packet.OP_ADVERTISEMENTS, payload, Packet.F_CMD)
@@ -699,9 +699,14 @@ class SendPacketCommand(Packet):
 @register_packet(Packet.OP_SEND_TEST_PKT, Packet.F_CMD)
 class SendTestPacketCommand(Packet):
 
-    def __init__(self, payload):
+    def __init__(self, payload, channel, mode):
+        self.channel = channel
+        self.mode = mode
+
+        payload_new = pack('<BB', self.channel, self.mode)
+        payload_new += payload
         #print("Initialising send test packet command")
-        super().__init__(Packet.OP_SEND_PKT, payload, Packet.F_CMD | Packet.F_NOTIFICATION)
+        super().__init__(Packet.OP_SEND_PKT, payload_new, Packet.F_CMD | Packet.F_NOTIFICATION)
 
 @register_packet(Packet.OP_SEND_PKT, Packet.F_CMD | Packet.F_RESP)
 class SendPacketResponse(Packet):

@@ -709,7 +709,7 @@ class SendTestPacketCommand(Packet):
         self.pattern = pattern
         print("pattern", pattern)
 
-        payload_new = pack('<BBB', self.channel, self.mode, length)
+        payload_new = pack('<BBB', self.mode, self.channel, length)
         payload_new += pattern
         payload_new += payload
         print("payload_new ", payload_new)

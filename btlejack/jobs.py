@@ -47,9 +47,9 @@ class SingleSnifferInterface(AbstractInterface):
             return True
         return False
 
-    def send_test_packet(self, packet, mode, channel):
+    def send_test_packet(self, packet, mode, channel, pattern):
 
-        self.link.write(SendTestPacketCommand(packet, mode, channel))
+        self.link.write(SendTestPacketCommand(packet, mode, channel, pattern))
         
 
     def set_timeout(self, timeout):
@@ -148,14 +148,14 @@ class SingleSnifferInterface(AbstractInterface):
         super().reset()
         return True
 
-    def enable_advertisements_sniffing(self,channel, mode):
+    def enable_advertisements_sniffing(self,pattern, channel, mode):
         """
         Enable Advertisements sniffing (synchronous).
 
         Sends a command switching link into Advertisements sniffing mode.
         """
         print("Enabling advertisement sniffing on channel ", channel)
-        self.link.write(EnableAdvertisementsSniffingCommand(channel, mode))
+        self.link.write(EnableAdvertisementsSniffingCommand(pattern, channel, mode))
         pkt = self.link.wait_packet(AdvertisementsResponse)
         super().sniff_advertisements()
         return (pkt.response_type == 0x03 and pkt.status == 0)
@@ -373,7 +373,7 @@ class MultiSnifferInterface(AbstractInterface):
         super().recover_chm()
 
 
-    def enable_advertisements_sniffing(self,channel,mode):
+    def enable_advertisements_sniffing(self, pattern, channel,mode):
         """
         Enable Advertisements sniffing.
 
@@ -394,7 +394,7 @@ class MultiSnifferInterface(AbstractInterface):
             channels = [39,37,38]
         super().sniff_advertisements()
         for i,link in enumerate(self.interfaces):
-            link.enable_advertisements_sniffing(channels[i], mode)
+            link.enable_advertisements_sniffing(pattern, channels[i], mode)
         return True
 
     def enable_advertisements_reactive_jamming(self,channel,mode,pattern,position):

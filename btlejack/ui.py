@@ -356,8 +356,8 @@ class CLIAdvertisementsJammer(AdvertisementsJammer):
 
 class CLIAdvertisementsSniffer(AdvertisementsSniffer):
 
-    def __init__(self, devices=None, output=None, verbose=None,channel=37,mode=0x0,policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=True,display_raw=False, no_stdout=False):
-        super().__init__(devices=devices,channel=channel,mode=mode,policy=policy,accept_invalid_crc=accept_invalid_crc)
+    def __init__(self, devices=None, output=None, verbose=None,channel=37,mode=0x0, pattern=b"", policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=True,display_raw=False, no_stdout=False):
+        super().__init__(devices=devices,channel=channel,mode=mode, pattern=pattern, policy=policy,accept_invalid_crc=accept_invalid_crc)
         self.output = output
         self.verbose = verbose
         self.display_raw = display_raw
@@ -459,13 +459,13 @@ class CLIAccessAddressSniffer(AccessAddressSniffer):
 
 class CLISendTestPacket(SendTestPacket):
 
-    def __init__(self, devices=None, verbose=None, channel=37, mode=0x0, payload=None):
-        super().__init__(devices=devices, channel=channel, mode=mode)
+    def __init__(self, devices=None, verbose=None, channel=37, mode=0x0, pattern=b"", payload=None):
+        super().__init__(devices=devices, channel=channel, mode=mode, pattern=pattern)
         self.verbose = True
-        self.send_test_packet(payload, channel, mode)
+        self.send_test_packet(payload, channel, mode, pattern)
 
-    def send_test_packet(self, payload, channel, mode):       
-        super().send_test_packet(payload, channel, mode)
+    def send_test_packet(self, payload, channel, mode, pattern):       
+        super().send_test_packet(payload, channel, mode, pattern)
 
 class CLIConnectionSniffer(ConnectionSniffer):
     """

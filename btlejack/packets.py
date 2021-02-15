@@ -398,9 +398,11 @@ class EnableAdvertisementsSniffingCommand(Packet):
     """
     Enable Advertisements Sniffing command.
     """
-    def __init__(self, channel, mode):
+    def __init__(self, pattern, channel, mode):
+        length = len(pattern)
         # operation 0x03: enable sniffing
-        payload = pack('<BBB', 0x03, channel, mode)
+        payload = pack('<BBBB', 0x03, channel, mode, length)
+        payload += pattern
         super().__init__(Packet.OP_ADVERTISEMENTS, payload, Packet.F_CMD)
 
 class DisableAdvertisementsSniffingCommand(Packet):
@@ -699,12 +701,18 @@ class SendPacketCommand(Packet):
 @register_packet(Packet.OP_SEND_TEST_PKT, Packet.F_CMD)
 class SendTestPacketCommand(Packet):
 
-    def __init__(self, payload, channel, mode):
+    def __init__(self, payload, channel, mode, pattern):
+        length = len(pattern)
+        print("length", length)
         self.channel = channel
         self.mode = mode
+        self.pattern = pattern
+        print("pattern", pattern)
 
-        payload_new = pack('<BB', self.channel, self.mode)
+        payload_new = pack('<BBB', self.channel, self.mode, length)
+        payload_new += pattern
         payload_new += payload
+        print("payload_new ", payload_new)
         #print("Initialising send test packet command")
         super().__init__(Packet.OP_SEND_PKT, payload_new, Packet.F_CMD | Packet.F_NOTIFICATION)
 

@@ -52,7 +52,6 @@ class Supervisor(object):
             #print("1. packets in process_packets: ", packets)
         if len(packets) > 0:
             for pkt in packets:
-                print("bla")
                 pkt = PacketRegistry.decode(pkt)
                 current_time = datetime.datetime.now()  
                 print("time: ", current_time)  
@@ -118,10 +117,11 @@ class SendTestPacket(Supervisor):
     Test packet supervisor. Allows to send a packet for testing.
     """
 
-    def __init__(self, devices=None, baudrate=115200, channel=37, mode=0x0, payload=None):
+    def __init__(self, devices=None, baudrate=115200, channel=37, mode=0x0, pattern=b"", payload=None):
         super().__init__()
         self.channel = channel
         self.mode = mode
+        self.pattern = pattern
 
         # Pick first device as we only want to use one
         if devices is not None:
@@ -133,11 +133,11 @@ class SendTestPacket(Supervisor):
             self.interface = SingleSnifferInterface()
 
 
-    def send_test_packet(self, packet, channel, mode):
+    def send_test_packet(self, packet, channel, mode, pattern):
         """
         Send a test packet.
         """
-        self.interface.send_test_packet(packet, channel, mode)
+        self.interface.send_test_packet(packet, channel, mode, pattern)
 
     def on_packet_received(self, packet):
         print("Overriding on_packet_received")
@@ -208,10 +208,11 @@ class AdvertisementsSniffer(Supervisor):
     STATE_IDLE = 0
     STATE_SNIFFING = 1
 
-    def __init__(self, devices=None, baudrate=115200,channel=37, mode = 0x0, policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=False):
+    def __init__(self, devices=None, baudrate=115200,channel=37, mode = 0x0, pattern=b"", policy={"policy_type":"blacklist","rules":[]},accept_invalid_crc=False):
         super().__init__()
         self.channel = channel
         self.mode = mode
+        self.pattern = pattern
         print("Advertisement channel sets channel to ", channel)
         self.policy = policy
         self.accept_invalid_crc = accept_invalid_crc
@@ -235,7 +236,7 @@ class AdvertisementsSniffer(Supervisor):
 
     def enable_adv_sniffing(self):
         # Enable advertisement sniffing.
-        if self.interface.enable_advertisements_sniffing(self.channel, self.mode):
+        if self.interface.enable_advertisements_sniffing(self.pattern, self.channel, self.mode):
             self.state = self.STATE_SNIFFING
         else:
             print("Error occured when attempted to put radio into sniffing mode")
@@ -247,7 +248,7 @@ class AdvertisementsSniffer(Supervisor):
             print("Error occured when attempted to disable radios sniffing mode")
 
 	# Enable advertisement sniffing.
-        if self.interface.enable_advertisements_sniffing(self.channel):
+        if self.interface.enable_advertisements_sniffing(self.pattern, self.channel, self.mode):
                 self.state = self.STATE_SNIFFING
 
     def on_advertisements_response(self, packet):
